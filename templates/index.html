@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeedbackPulse | Student Feedback Analyzer</title>
+    <meta name="description"
+        content="Secure, anonymous student-staff feedback system with AI sentiment analysis for colleges.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- ── Header ─────────────────────────────────────────────────── -->
+        <header>
+            <div class="logo">Feedback<span>Pulse</span></div>
+            <div id="auth-controls">
+                <span id="user-info" style="display:none;"></span>
+                <button id="logout-btn" class="btn btn-outline" style="display:none;">
+                    ← Sign Out
+                </button>
+            </div>
+        </header>
+
+        <!-- ══════════════════════════════════════════════════════════════
+         LANDING SECTION
+         ══════════════════════════════════════════════════════════════ -->
+        <main id="landing-section" class="animate-fade-in">
+            <div class="glass hero-card">
+                <div class="hero-badge">
+                    <span class="hero-badge-dot"></span>
+                    Anonymous &amp; Secure Feedback
+                </div>
+                <h1>Empower <span class="gradient-text">Honest</span> Feedback</h1>
+                <p class="subtitle">
+                    A privacy-first feedback system for students and Class Representatives.
+                    Powered by sentiment analysis.
+                </p>
+                <div class="hero-buttons">
+                    <button id="student-login-btn" class="btn btn-google">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"
+                            alt="Google">
+                        Continue with Google
+                    </button>
+                    <button id="cr-login-trigger" class="btn btn-outline">
+                        CR Admin Dashboard →
+                    </button>
+                </div>
+                <div class="features-row">
+                    <div class="feature-chip"><span class="icon">🔒</span> Anonymised by default</div>
+                    <div class="feature-chip"><span class="icon">📊</span> Sentiment insights</div>
+                    <div class="feature-chip"><span class="icon">⚡</span> Real-time reports</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ══════════════════════════════════════════════════════════════
+         CR LOGIN SECTION
+         ══════════════════════════════════════════════════════════════ -->
+        <section id="cr-login-section" style="display:none;" class="animate-fade-in">
+            <div class="section-centered">
+                <button class="back-link back-btn">← Back to Home</button>
+                <div class="glass card">
+                    <h2>CR Admin Portal</h2>
+
+                    <!-- Auth mode tabs -->
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+                        <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Register</button>
+                    </div>
+
+                    <!-- LOGIN FORM -->
+                    <form id="cr-login-form" autocomplete="on">
+                        <div class="form-group">
+                            <label for="cr-email">Email</label>
+                            <input type="email" id="cr-email" required placeholder="cr@college.edu"
+                                autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="cr-password">Password</label>
+                            <input type="password" id="cr-password" required placeholder="••••••••"
+                                autocomplete="current-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="cr-login-passcode">Passcode <span
+                                    style="color:var(--text-muted);font-size:.8rem;">(set during signup)</span></label>
+                            <input type="password" id="cr-login-passcode" placeholder="Enter your passcode"
+                                inputmode="numeric" maxlength="8" autocomplete="off">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="cr-submit-btn" style="width:100%;">Sign
+                            In</button>
+                    </form>
+
+                    <!-- SIGNUP FORM -->
+                    <form id="cr-signup-form" style="display:none;" autocomplete="on">
+                        <div class="form-group">
+                            <label for="cr-reg-name">Full Name</label>
+                            <input type="text" id="cr-reg-name" required placeholder="Your Name" autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="cr-reg-email">Email</label>
+                            <input type="email" id="cr-reg-email" required placeholder="cr@college.edu"
+                                autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="cr-reg-department">Department</label>
+                            <input type="text" id="cr-reg-department" placeholder="e.g. Computer Science"
+                                autocomplete="off">
+                            <span style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem;display:block;">
+                                📚 Your department (can be updated later from Profile)
+                            </span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cr-reg-password">Password</label>
+                            <input type="password" id="cr-reg-password" required placeholder="Min 6 characters"
+                                autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="cr-reg-passcode">Set Passcode <span
+                                    style="color:var(--accent);font-size:.8rem;">*required</span></label>
+                            <input type="password" id="cr-reg-passcode" required
+                                placeholder="4–8 digit number e.g. 1234" inputmode="numeric" maxlength="8"
+                                pattern="\d{4,8}" autocomplete="off">
+                            <span style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem;display:block;">
+                                🔒 You'll need this every time you log in.
+                            </span>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="cr-reg-btn" style="width:100%;">Create
+                            Account</button>
+                    </form>
+
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════════════════════════
+         STUDENT DASHBOARD
+         ══════════════════════════════════════════════════════════════ -->
+        <section id="student-dashboard" style="display:none;" class="animate-fade-in">
+            <div class="dashboard-grid">
+
+                <!-- Feedback Form -->
+                <div class="glass card" style="grid-column: span 2;">
+                    <h2>Submit Feedback</h2>
+                    <p style="color:var(--text-dim);font-size:.9rem;margin-bottom:1.5rem;">
+                        Your identity remains hidden. Only severe misuse disclosures can be reviewed.
+                    </p>
+                    <form id="feedback-form">
+                        <div class="dashboard-grid">
+                            <div class="form-group">
+                                <label for="student-dept">Department</label>
+                                <select id="student-dept" required>
+                                    <option value="">Select Department</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="student-subject">Subject</label>
+                                <select id="student-subject" required disabled>
+                                    <option value="">Select Subject</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="student-staff">Staff Member</label>
+                                <select id="student-staff" required disabled>
+                                    <option value="">Select Staff</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="feedback-text">Your Feedback</label>
+                            <textarea id="feedback-text" rows="5" required
+                                placeholder="Share your experience honestly. Min 10 characters…"></textarea>
+                            <div style="display:flex;justify-content:space-between;margin-top:.35rem;">
+                                <span style="font-size:.75rem;color:var(--text-muted);">
+                                    💡 Anonymous submission — your identity is protected
+                                </span>
+                                <span id="char-count" style="font-size:.75rem;color:var(--text-muted);">0 / 1000</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
+                            Submit Feedback
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Student Past Submissions (mini panel) -->
+                <div class="glass card" id="student-history-card" style="display:none;">
+                    <h3>My Submissions</h3>
+                    <div id="student-history-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">📝</div>
+                            <p>No submissions yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════════
+         CR DASHBOARD
+         ══════════════════════════════════════════════════════════════ -->
+        <section id="cr-dashboard" style="display:none;" class="animate-fade-in">
+
+            <div class="tabs" role="tablist">
+                <div class="tab active" data-tab="analytics" role="tab">📊 Analytics</div>
+                <div class="tab" data-tab="feedback" role="tab">💬 Feedback</div>
+                <div class="tab" data-tab="manage" role="tab">⚙️ Manage</div>
+                <div class="tab" data-tab="profile" role="tab">👤 Profile</div>
+            </div>
+
+            <!-- ── Analytics Tab ──────────────────────────────────────── -->
+            <div id="analytics-tab" class="tab-content">
+
+                <!-- Stat cards -->
+                <div class="dashboard-grid-3" style="margin-bottom:1.5rem;">
+                    <div class="glass stat-card">
+                        <div class="stat-label">Total Feedback</div>
+                        <div class="stat-value total" id="stat-total">—</div>
+                    </div>
+                    <div class="glass stat-card">
+                        <div class="stat-label">Positive</div>
+                        <div class="stat-value positive" id="stat-pos">—</div>
+                    </div>
+                    <div class="glass stat-card">
+                        <div class="stat-label">Neutral</div>
+                        <div class="stat-value neutral" id="stat-neu">—</div>
+                    </div>
+                    <div class="glass stat-card">
+                        <div class="stat-label">Negative</div>
+                        <div class="stat-value negative" id="stat-neg">—</div>
+                    </div>
+                    <div class="glass stat-card">
+                        <div class="stat-label">Avg Score</div>
+                        <div class="stat-value total" id="stat-avg">—</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="dashboard-grid">
+                    <div class="glass card">
+                        <h3>Sentiment Distribution</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="overallChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass card">
+                        <h3>Top Keywords</h3>
+                        <div style="margin-top:.5rem;">
+                            <p style="font-size:.82rem;color:var(--text-dim);margin-bottom:.5rem;">Compliments</p>
+                            <div class="chip-list" id="compliment-chips">
+                                <span class="chip chip-positive">Loading…</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:1.25rem;">
+                            <p style="font-size:.82rem;color:var(--text-dim);margin-bottom:.5rem;">Complaints</p>
+                            <div class="chip-list" id="complaint-chips">
+                                <span class="chip chip-negative">Loading…</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Per-subject breakdown -->
+                <div class="glass card" style="margin-top:1.5rem;">
+                    <h3>Subject Breakdown</h3>
+                    <div id="subject-breakdown">
+                        <div class="empty-state">
+                            <div class="empty-icon">📚</div>
+                            <p>Loading…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Feedback Tab ────────────────────────────────────────── -->
+            <div id="feedback-tab" class="tab-content" style="display:none;">
+                <div class="glass card">
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+                        <h3 style="margin:0;">Submitted Feedback</h3>
+                        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+                            <select id="filter-sentiment" style="width:auto;padding:.5rem .75rem;font-size:.85rem;">
+                                <option value="">All Sentiments</option>
+                                <option value="Positive">Positive</option>
+                                <option value="Neutral">Neutral</option>
+                                <option value="Negative">Negative</option>
+                            </select>
+                            <select id="filter-subject" style="width:auto;padding:.5rem .75rem;font-size:.85rem;">
+                                <option value="">All Subjects</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="feedback-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">💬</div>
+                            <p>Loading…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Manage Tab ──────────────────────────────────────────── -->
+            <div id="manage-tab" class="tab-content" style="display:none;">
+                <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
+
+                    <!-- Unified Add Form -->
+                    <div class="glass card">
+                        <h3>➕ Add Staff Member</h3>
+                        <p style="color:var(--text-dim);font-size:.85rem;margin-bottom:1.25rem;">
+                            Fill in the department (create if new), assign a subject, then add the staff name.
+                        </p>
+                        <form id="unified-add-form">
+                            <div class="form-group">
+                                <label for="unified-dept-input">Department</label>
+                                <div style="display:flex;gap:.5rem;">
+                                    <select id="unified-dept-select" style="flex:1;">
+                                        <option value="">— Select existing —</option>
+                                    </select>
+                                    <input type="text" id="unified-dept-input" placeholder="Or type new dept…"
+                                        style="flex:1;">
+                                </div>
+                                <span style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem;display:block;">
+                                    Select existing OR type a new department name
+                                </span>
+                            </div>
+                            <div class="form-group">
+                                <label for="unified-subject-input">Subject Name</label>
+                                <input type="text" id="unified-subject-input" placeholder="e.g. Data Structures"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label for="unified-staff-input">Staff Name</label>
+                                <input type="text" id="unified-staff-input" placeholder="e.g. Dr. Ramesh" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="unified-add-btn" style="width:100%;">
+                                Add Staff Member
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Live Staff Members List -->
+                    <div class="glass card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <h3 style="margin:0;">👥 Staff Members</h3>
+                            <span id="staff-live-badge" class="live-badge">● LIVE</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom:.75rem;">
+                            <select id="staff-filter-dept">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div id="staff-list-container">
+                            <div class="empty-state">
+                                <div class="empty-icon">👥</div>
+                                <p>No staff added yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── Profile Tab ────────────────────────────────────────── -->
+            <div id="profile-tab" class="tab-content" style="display:none;">
+                <div class="dashboard-grid" style="grid-template-columns: 340px 1fr; align-items: start;">
+
+                    <!-- Profile Card -->
+                    <div class="glass card profile-card">
+                        <div class="profile-avatar-wrap">
+                            <div class="profile-avatar" id="profile-avatar-display">
+                                <span id="profile-avatar-initials">CR</span>
+                                <img id="profile-avatar-img" src="" alt="Profile" style="display:none;">
+                            </div>
+                            <label for="profile-pic-input" class="profile-avatar-edit-btn" title="Change photo">
+                                📷
+                            </label>
+                            <input type="file" id="profile-pic-input" accept="image/*" style="display:none;">
+                        </div>
+                        <div class="profile-info-display">
+                            <div id="profile-name-display" class="profile-name">—</div>
+                            <div id="profile-dept-display" class="profile-dept">—</div>
+                            <div id="profile-email-display" class="profile-email">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Profile Form -->
+                    <div class="glass card">
+                        <h3>Edit Profile</h3>
+                        <form id="profile-edit-form">
+                            <div class="form-group">
+                                <label for="profile-name-input">Display Name</label>
+                                <input type="text" id="profile-name-input" placeholder="Your full name">
+                            </div>
+                            <div class="form-group">
+                                <label for="profile-dept-input">Department</label>
+                                <input type="text" id="profile-dept-input" placeholder="e.g. Computer Science">
+                            </div>
+                            <div class="form-group">
+                                <label for="profile-bio-input">Bio</label>
+                                <textarea id="profile-bio-input" rows="4"
+                                    placeholder="Write a short bio about yourself as CR…"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="profile-save-btn" style="width:100%;">
+                                Save Changes
+                            </button>
+                        </form>
+
+                        <!-- Bio display area -->
+                        <div id="profile-bio-display"
+                            style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--glass-border);display:none;">
+                            <p
+                                style="font-size:.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;">
+                                Bio</p>
+                            <p id="profile-bio-text"
+                                style="color:var(--text-sub);font-size:.9rem;line-height:1.6;font-style:italic;"></p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+    </div><!-- /.container -->
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>
