@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS cr_profiles (
     full_name     TEXT,
     passcode_hash TEXT,                    -- bcrypt hash of the 4–8 digit passcode
     department    TEXT,                    -- NEW: CR's department
+    year          TEXT,                    -- NEW: CR's year (e.g., 1st, 2nd, 3rd, 4th)
     bio           TEXT,                    -- NEW: CR bio
     avatar_url    TEXT,                    -- NEW: profile picture (base64 data URL or external URL)
     created_at    TIMESTAMPTZ DEFAULT NOW()
@@ -50,11 +51,21 @@ CREATE TABLE IF NOT EXISTS feedback (
     student_uid     TEXT NOT NULL,
     subject_id      UUID REFERENCES subjects(id) ON DELETE CASCADE,
     staff_id        UUID REFERENCES staff(id) ON DELETE CASCADE,
-    feedback_text   TEXT NOT NULL CHECK (char_length(feedback_text) BETWEEN 10 AND 2000),
+    feedback_text   TEXT NOT NULL,
     sentiment_label TEXT CHECK (sentiment_label IN ('Positive', 'Neutral', 'Negative')),
     sentiment_score FLOAT,
-    created_at      TIMESTAMPTZ DEFAULT NOW()
+    -- 6 structured rating questions (1–5 stars)
+    q1              SMALLINT CHECK (q1 BETWEEN 1 AND 5),  -- Teacher explains clearly
+    q2              SMALLINT CHECK (q2 BETWEEN 1 AND 5),  -- Finishes syllabus on time
+    q3              SMALLINT CHECK (q3 BETWEEN 1 AND 5),  -- Teaching methods helpful
+    q4              SMALLINT CHECK (q4 BETWEEN 1 AND 5),  -- Encourages questions
+    q5              SMALLINT CHECK (q5 BETWEEN 1 AND 5),  -- Tests/marks fair
+    q6              SMALLINT CHECK (q6 BETWEEN 1 AND 5),  -- Overall satisfaction
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    -- Prevent duplicate submissions per student per subject
+    UNIQUE (student_uid, subject_id)
 );
+
 
 -- ── Indexes ────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_feedback_subject  ON feedback(subject_id);
