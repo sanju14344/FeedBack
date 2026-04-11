@@ -4,7 +4,9 @@
 
 const SUPABASE_URL = "https://wesspzkvpzzvcrrxephf.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indlc3Nwemt2cHp6dmNycnhlcGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDQ4NTIsImV4cCI6MjA5MDAyMDg1Mn0.Gd3Qn3NvHd1p9qhuBt11Dc6fbH5c54bgm_pevNczf2I";
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
+    ? "http://127.0.0.1:5000/api" 
+    : "/api";
 
 let sb = null;
 if (SUPABASE_URL && SUPABASE_ANON_KEY) {
