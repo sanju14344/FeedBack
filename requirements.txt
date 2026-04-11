@@ -4,3 +4,4 @@ supabase>=2.0
 python-dotenv>=1.0
 textblob>=0.18
 bcrypt>=4.0
+openai>=1.0.0
