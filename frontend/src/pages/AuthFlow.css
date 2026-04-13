@@ -1,0 +1,101 @@
+.auth-card {
+  max-width: 700px;
+  width: 100%;
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  /* Specific styling override to match screenshot #3 slightly darker theme */
+}
+
+.auth-title {
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+}
+
+.auth-subtitle {
+  font-size: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  background: white;
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: var(--transition);
+}
+
+.google-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.trust-badges {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 2rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+.admin-login-sm {
+  margin-top: 3rem;
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.toast-popup {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #7f1d1d;
+  color: #fca5a5;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.toast-icon {
+  font-weight: bold;
+}
