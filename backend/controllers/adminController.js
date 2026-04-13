@@ -50,3 +50,37 @@ exports.getInsights = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getCRs = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('cr_profiles').select('id, email, full_name, department, year, is_approved').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.approveCR = async (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "id required" });
+  try {
+    const { error } = await supabase.from('cr_profiles').update({ is_approved: true }).eq('id', id);
+    if (error) throw error;
+    res.json({ message: "CR approved successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.rejectCR = async (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "id required" });
+  try {
+    const { error } = await supabase.from('cr_profiles').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ message: "CR rejected and deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

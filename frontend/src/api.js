@@ -11,9 +11,15 @@ export const getSubjects = (deptId) => api.get(`/subjects/${deptId}`);
 export const getStaff = (deptId) => api.get(`/staff/${deptId}`);
 export const submitFeedback = (data) => api.post('/submit-feedback', data);
 
-export const crLogin = (data) => api.post('/auth/cr-signup', data); // Maps to the backend flow
+export const crSignup = (data) => api.post('/auth/cr-signup', data); // Uses new real signup
+export const crLogin = (data) => api.post('/auth/cr-login', data);
 export const getCrProfile = (uid) => api.get(`/auth/cr-profile?uid=${uid}`);
 export const getInsights = (dept) => api.get(`/admin/insights?dept=${dept}`);
 export const getFeedbackLogs = (dept) => api.get(`/admin/feedback?dept=${dept}`);
+export const getSubmittedSubjects = (studentUid, deptId) =>
+  api.get(`/submitted-subjects?student_uid=${studentUid}&dept_id=${deptId}`);
+export const getCRs = () => api.get('/admin/crs');
+export const approveCR = (id) => api.post('/admin/cr/approve', { id });
+export const rejectCR = (id) => api.post('/admin/cr/reject', { id });
 
 export default api;

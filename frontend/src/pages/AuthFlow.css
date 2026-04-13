@@ -99,3 +99,49 @@
 .toast-icon {
   font-weight: bold;
 }
+
+.auth-form {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--input-bg);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.auth-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem auto;
+  color: var(--text-sub);
+  width: 100%;
+  max-width: 320px;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.auth-divider span {
+  padding: 0 0.75rem;
+}

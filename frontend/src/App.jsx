@@ -5,6 +5,9 @@ import AuthFlow from './pages/AuthFlow';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import AdminMasterDashboard from './pages/AdminMasterDashboard';
+import StudentSelect from './pages/StudentSelect';
+import SubjectList from './pages/SubjectList';
+import FeedbackForm from './pages/FeedbackForm';
 import './index.css';
 
 function App() {
@@ -28,6 +31,12 @@ function App() {
         <Route path="/admin-login" element={<Login theme={theme} toggleTheme={toggleTheme} role="Admin" />} />
         <Route path="/dashboard" element={<Dashboard theme={theme} toggleTheme={toggleTheme} />} />
         <Route path="/admin-master" element={<AdminMasterDashboard theme={theme} toggleTheme={toggleTheme} />} />
+
+        {/* Student Feedback Flow */}
+        <Route path="/student" element={<StudentSelect theme={theme} toggleTheme={toggleTheme} />} />
+        <Route path="/student/subjects" element={<SubjectList theme={theme} toggleTheme={toggleTheme} />} />
+        <Route path="/student/feedback/:subjectId" element={<FeedbackForm theme={theme} toggleTheme={toggleTheme} />} />
+
         {/* Redirect unknown to landing */}
         <Route path="*" element={<Landing theme={theme} toggleTheme={toggleTheme} />} />
       </Routes>

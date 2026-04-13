@@ -60,3 +60,31 @@
   margin-top: 1rem;
   width: 100%;
 }
+
+.auth-tabs {
+  display: flex;
+  background: var(--input-bg);
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  margin-top: 1rem;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-tab.active {
+  background: var(--bg-color);
+  color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}

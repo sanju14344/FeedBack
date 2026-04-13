@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS cr_profiles (
     year          TEXT,                    -- NEW: CR's year (e.g., 1st, 2nd, 3rd, 4th)
     bio           TEXT,                    -- NEW: CR bio
     avatar_url    TEXT,                    -- NEW: profile picture (base64 data URL or external URL)
+    is_approved   BOOLEAN DEFAULT FALSE,   -- NEW: Admin approval status
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 

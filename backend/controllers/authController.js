@@ -11,14 +11,51 @@ exports.checkCr = async (req, res) => {
   }
 };
 
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
 exports.crSignup = async (req, res) => {
-  const { uid, email, full_name, department, year } = req.body;
-  if (!uid || !email) return res.status(400).json({ error: "uid and email required" });
+  const { email, full_name, department, year, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+  
   try {
-    const row = { id: uid, email, full_name: full_name || email, department, year };
-    const { error } = await supabase.from('cr_profiles').upsert(row);
+    // Generate a secure hash
+    const passcode_hash = await bcrypt.hash(password, 10);
+    // Use a generated uid for mock auth since we're bypassing Supabase's native auth for this custom flow
+    const id = crypto.randomUUID();
+    
+    const row = { id, email, full_name, department, year, passcode_hash, is_approved: false };
+    
+    const { error } = await supabase.from('cr_profiles').insert([row]);
+    if (error) {
+      if (error.code === '23505') return res.status(409).json({ error: "User already exists" });
+      throw error;
+    }
+    
+    res.status(201).json({ message: "Registration successful. Pending admin approval.", id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+exports.crLogin = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+
+  try {
+    const { data: profiles, error } = await supabase.from('cr_profiles').select('*').eq('email', email);
     if (error) throw error;
-    res.status(201).json({ message: "CR profile created", id: uid });
+    if (!profiles || profiles.length === 0) return res.status(401).json({ error: "Invalid credentials" });
+    
+    const profile = profiles[0];
+    const match = await bcrypt.compare(password, profile.passcode_hash);
+    if (!match) return res.status(401).json({ error: "Invalid credentials" });
+    
+    if (!profile.is_approved) {
+      return res.status(403).json({ error: "Your account is still pending Admin approval." });
+    }
+
+    res.json({ message: "Login successful", uid: profile.id, profile: { email: profile.email, full_name: profile.full_name, department: profile.department, year: profile.year } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

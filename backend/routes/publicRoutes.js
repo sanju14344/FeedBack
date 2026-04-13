@@ -7,5 +7,6 @@ router.get('/subjects/:dept_id', publicController.getSubjects);
 router.get('/staff/:dept_id', publicController.getStaff);
 router.get('/departments-by-year/:year', publicController.getDepartmentsByYear);
 router.post('/submit-feedback', publicController.submitFeedback);
+router.get('/submitted-subjects', publicController.getSubmittedSubjects);
 
 module.exports = router;

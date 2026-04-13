@@ -85,3 +85,23 @@ exports.submitFeedback = async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 };
+
+exports.getSubmittedSubjects = async (req, res) => {
+  const { student_uid, dept_id } = req.query;
+  if (!student_uid || !dept_id) return res.status(400).json({ error: 'Missing student_uid or dept_id' });
+  try {
+    // Get all subject IDs for this department
+    const { data: subjects } = await supabase.from('subjects').select('id').eq('department_id', dept_id);
+    const subjectIds = (subjects || []).map(s => s.id);
+    if (subjectIds.length === 0) return res.json([]);
+
+    // Get feedback rows for this student in those subjects
+    const { data: fb } = await supabase.from('feedback')
+      .select('subject_id')
+      .eq('student_uid', student_uid)
+      .in('subject_id', subjectIds);
+    res.json((fb || []).map(f => f.subject_id));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};

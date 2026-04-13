@@ -2,9 +2,9 @@ const { OpenAI } = require('openai');
 const vader = require('vader-sentiment');
 require('dotenv').config({ path: '../.env' });
 
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
-});
+}) : null;
 
 // Local sentiment fallback
 function analyzeSentimentLocal(text, starRatings = null) {
