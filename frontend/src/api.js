@@ -22,4 +22,10 @@ export const getCRs = () => api.get('/admin/crs');
 export const approveCR = (id) => api.post('/admin/cr/approve', { id });
 export const rejectCR = (id) => api.post('/admin/cr/reject', { id });
 
+// Management
+export const createStaff = (data) => api.post('/admin/staff', data);
+export const deleteStaff = (id) => api.delete(`/admin/staff/${id}`);
+export const createSubject = (data) => api.post('/admin/subjects', data);
+export const deleteSubject = (id) => api.delete(`/admin/subjects/${id}`);
+
 export default api;

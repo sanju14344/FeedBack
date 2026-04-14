@@ -19,18 +19,21 @@ function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
   return (
     <div className="star-row">
-      {[1, 2, 3, 4, 5].map(star => (
-        <button
-          key={star}
-          type="button"
-          className={`star-btn ${star <= (hovered || value) ? 'filled' : ''}`}
-          onMouseEnter={() => setHovered(star)}
-          onMouseLeave={() => setHovered(0)}
-          onClick={() => onChange(star)}
-        >
-          ★
-        </button>
-      ))}
+      {[1, 2, 3, 4, 5].map(star => {
+        const isFilled = star <= (hovered || value);
+        return (
+          <button
+            key={star}
+            type="button"
+            className={`star-btn ${isFilled ? 'filled' : ''}`}
+            onMouseEnter={() => setHovered(star)}
+            onMouseLeave={() => setHovered(0)}
+            onClick={() => onChange(star)}
+          >
+            {isFilled ? '★' : '☆'}
+          </button>
+        );
+      })}
       <span className="star-label">{value ? `${value}/5` : 'Not rated'}</span>
     </div>
   );
@@ -48,6 +51,7 @@ export default function FeedbackForm({ theme, toggleTheme }) {
   const deptId = sessionStorage.getItem('student_dept');
 
   const [ratings, setRatings] = useState({ q1:0, q2:0, q3:0, q4:0, q5:0, q6:0 });
+  const [questionComments, setQuestionComments] = useState({ q1:'', q2:'', q3:'', q4:'', q5:'', q6:'' });
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -71,6 +75,7 @@ export default function FeedbackForm({ theme, toggleTheme }) {
         subject_id: subjectId,
         staff_id: subject?.staff_id || null,
         feedback_text: comment,
+        question_comments: questionComments,
         ...ratings,
       };
       const res = await submitFeedback(payload);
@@ -139,7 +144,10 @@ export default function FeedbackForm({ theme, toggleTheme }) {
               <span className="badge-dot"></span>
               Anonymous Feedback
             </div>
-            <h1 className="form-title">{subject?.name}</h1>
+            <h1 className="form-title">
+              {subject?.name} 
+              {subject?.staff_name && <span style={{fontSize:'0.6em', opacity: 0.7, fontWeight: 'normal'}}> — {subject.staff_name}</span>}
+            </h1>
             <p className="form-subtitle">
               Your identity is completely anonymous. Rate each aspect honestly.
             </p>
@@ -150,12 +158,23 @@ export default function FeedbackForm({ theme, toggleTheme }) {
             <div className="ratings-section">
               <h3 className="section-heading">Rate Each Aspect</h3>
               {QUESTIONS.map(q => (
-                <div key={q.key} className="rating-row">
-                  <span className="rating-label">{q.label}</span>
-                  <StarRating
-                    value={ratings[q.key]}
-                    onChange={val => setRatings(prev => ({ ...prev, [q.key]: val }))}
-                  />
+                <div key={q.key} className="rating-row-container">
+                  <div className="rating-row">
+                    <span className="rating-label">{q.label}</span>
+                    <StarRating
+                      value={ratings[q.key]}
+                      onChange={val => setRatings(prev => ({ ...prev, [q.key]: val }))}
+                    />
+                  </div>
+                  <div className="rating-comment">
+                    <input
+                      type="text"
+                      className="question-comment-input"
+                      placeholder="Add a comment for this question (optional)..."
+                      value={questionComments[q.key]}
+                      onChange={e => setQuestionComments(prev => ({ ...prev, [q.key]: e.target.value }))}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

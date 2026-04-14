@@ -59,9 +59,14 @@ exports.submitFeedback = async (req, res) => {
       const q = ratings[`q${i}`];
       if (!q || q < 1 || q > 5) return res.status(400).json({ error: `Invalid rating for q${i}` });
       starValues.push(Number(q));
-      parts.push(`${questions[i-1]}: ${q}/5`);
+      
+      let part = `${questions[i-1]}: ${q}/5`;
+      if (req.body.question_comments && req.body.question_comments[`q${i}`]) {
+        part += ` (Comment: ${req.body.question_comments[`q${i}`]})`;
+      }
+      parts.push(part);
     }
-    if (feedback_text) parts.push(`Comment: ${feedback_text}`);
+    if (feedback_text) parts.push(`General Comment: ${feedback_text}`);
     const fullText = parts.join("; ");
 
     // Analyze using AI

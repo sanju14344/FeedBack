@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
-import { getSubjects, getSubmittedSubjects } from '../api';
+import { getSubjects, getSubmittedSubjects, getStaff } from '../api';
 import './SubjectList.css';
 
 export default function SubjectList({ theme, toggleTheme }) {
@@ -24,9 +24,16 @@ export default function SubjectList({ theme, toggleTheme }) {
     Promise.all([
       getSubjects(deptId),
       getSubmittedSubjects(studentUid, deptId),
+      getStaff(deptId)
     ])
-      .then(([subjRes, submittedRes]) => {
-        setSubjects(subjRes.data || []);
+      .then(([subjRes, submittedRes, staffRes]) => {
+        const staffList = staffRes.data || [];
+        const enrichedSubjects = (subjRes.data || []).map(subject => {
+          const assignedStaff = staffList.find(s => s.subject_id === subject.id);
+          return assignedStaff ? { ...subject, staff_name: assignedStaff.name, staff_id: assignedStaff.id } : subject;
+        });
+        
+        setSubjects(enrichedSubjects);
         // Merge backend data with any local session cache
         const fromSession = JSON.parse(sessionStorage.getItem('submitted_subjects') || '[]');
         const merged = Array.from(new Set([...(submittedRes.data || []), ...fromSession]));

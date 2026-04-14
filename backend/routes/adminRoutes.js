@@ -9,4 +9,10 @@ router.get('/crs', adminController.getCRs);
 router.post('/cr/approve', adminController.approveCR);
 router.post('/cr/reject', adminController.rejectCR);
 
+// Staff & Subject Management
+router.post('/staff', adminController.createStaff);
+router.delete('/staff/:id', adminController.deleteStaff);
+router.post('/subjects', adminController.createSubject);
+router.delete('/subjects/:id', adminController.deleteSubject);
+
 module.exports = router;

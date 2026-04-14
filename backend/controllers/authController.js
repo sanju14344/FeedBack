@@ -23,7 +23,6 @@ exports.crSignup = async (req, res) => {
     const passcode_hash = await bcrypt.hash(password, 10);
     // Use a generated uid for mock auth since we're bypassing Supabase's native auth for this custom flow
     const id = crypto.randomUUID();
-    
     const row = { id, email, full_name, department, year, passcode_hash, is_approved: false };
     
     const { error } = await supabase.from('cr_profiles').insert([row]);
@@ -48,6 +47,14 @@ exports.crLogin = async (req, res) => {
     if (!profiles || profiles.length === 0) return res.status(401).json({ error: "Invalid credentials" });
     
     const profile = profiles[0];
+    
+    if (!profile.passcode_hash) {
+      console.error('crLogin: Critical error - passcode_hash is missing for user:', email);
+      return res.status(500).json({ 
+        error: "Account data is incomplete (missing password hash). Please contact Admin or re-register your account." 
+      });
+    }
+
     const match = await bcrypt.compare(password, profile.passcode_hash);
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
     
@@ -81,7 +88,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "password";
 
 exports.adminLogin = (req, res) => {
   const { email, password } = req.body;
-  if (email !== process.env.ADMIN_EMAIL || password !== process.env.ADMIN_PASSWORD) {
+  if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: "Invalid admin credentials" });
   }
   const token = Math.random().toString(36).substring(2) + Date.now().toString(36);

@@ -1,15 +1,16 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Header.css';
-import { LogIn, GraduationCap, Moon, Sun, ArrowLeft } from 'lucide-react';
+import { LogIn, GraduationCap, ArrowLeft, Shield } from 'lucide-react';
 
 export default function Header({ 
   showAuth = true, 
   userText = null, 
   onLogout = null, 
-  onBack = null,
-  theme, 
-  toggleTheme 
+  onBack = null
 }) {
+  const navigate = useNavigate();
+
   return (
     <header className="site-header">
       <div className="header-left">
@@ -31,15 +32,15 @@ export default function Header({
             </button>
           </>
         ) : showAuth ? (
-          <button className="pill-btn outline">
-            <GraduationCap size={16} /> <span>CR Login / Sign Up</span>
-          </button>
+          <>
+            <button className="pill-btn outline admin-login-btn" onClick={() => navigate('/admin-login')}>
+              <Shield size={16} /> <span>Admin Login</span>
+            </button>
+            <button className="pill-btn outline" onClick={() => navigate('/cr-login')}>
+              <GraduationCap size={16} /> <span>CR Login / Sign Up</span>
+            </button>
+          </>
         ) : null}
-        
-        <button className="theme-toggle" onClick={toggleTheme}>
-          {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-          <span>Toggle Theme</span>
-        </button>
       </div>
     </header>
   );

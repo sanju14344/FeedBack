@@ -40,13 +40,17 @@
 }
 
 .pill-btn.outline {
-  color: var(--primary);
-  background: var(--primary-glow);
-  border: 1px solid var(--primary-glow);
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .pill-btn.outline:hover {
-  background: rgba(139, 92, 246, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
 }
 
 .pill-btn.danger {
@@ -81,15 +85,8 @@
   color: var(--text-sub);
 }
 
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  color: var(--text-main);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0.5rem;
+@media (max-width: 768px) {
+  .admin-login-btn {
+    display: none !important;
+  }
 }

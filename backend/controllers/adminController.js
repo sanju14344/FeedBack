@@ -84,3 +84,49 @@ exports.rejectCR = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.createStaff = async (req, res) => {
+  const { name, department_id, subject_id } = req.body;
+  if (!name || !department_id) return res.status(400).json({ error: "Name and department_id are required" });
+  try {
+    const { data, error } = await supabase.from('staff').insert([{ name, department_id, subject_id }]).select();
+    if (error) throw error;
+    res.status(201).json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.createSubject = async (req, res) => {
+  const { name, department_id, year } = req.body;
+  if (!name || !department_id) return res.status(400).json({ error: "Name and department_id are required" });
+  try {
+    const { data, error } = await supabase.from('subjects').insert([{ name, department_id, year }]).select();
+    if (error) throw error;
+    res.status(201).json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteStaff = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('staff').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ message: "Staff deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteSubject = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('subjects').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ message: "Subject deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
