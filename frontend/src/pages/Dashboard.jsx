@@ -194,7 +194,7 @@ export default function Dashboard({ theme, toggleTheme }) {
     navigate('/');
   };
 
-  if (loading) return <HexagonLoader text="Analyzing Feedback Data..." />;
+  if (loading) return <HexagonLoader text="Loading CR Dashboard..." />;
 
   return (
     <div className="page-wrapper dashboard-wrapper">
