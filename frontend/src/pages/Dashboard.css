@@ -267,8 +267,9 @@
   margin: 0 auto;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 800px) {
   .manage-layout {
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 }
@@ -475,9 +476,16 @@
 }
 
 .ai-list li::before {
-  content: "â€¢";
+  content: "•";
   position: absolute;
   left: 0;
   color: var(--primary);
   font-weight: bold;
+}
+
+@media (max-width: 800px) {
+  .charts-grid,
+  .ai-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
