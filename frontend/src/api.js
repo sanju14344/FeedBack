@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// In dev: uses localhost:3000. In production: uses VITE_API_URL env var.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// In dev: uses localhost:3000. In production: uses /api which reroutes in Vercel
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api');
 
 const api = axios.create({
   baseURL: API_URL,
