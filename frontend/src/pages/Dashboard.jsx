@@ -15,6 +15,7 @@ import {
   deleteSubject,
   getDepartmentsByYear
 } from '../api';
+import { generatePDFReport } from '../utils/reportGenerator';
 import './Dashboard.css';
 
 export default function Dashboard({ theme, toggleTheme }) {
@@ -169,6 +170,12 @@ export default function Dashboard({ theme, toggleTheme }) {
 
         {activeTab === 'Analytics' && (
           <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 className="section-title" style={{ margin: 0 }}>Analytics Overview</h2>
+              <Button onClick={() => generatePDFReport(profile, insights, feedback)} variant="primary">
+                Download PDF Report
+              </Button>
+            </div>
             {/* Stat Cards */}
             <div className="stats-grid">
               <GlassCard className="stat-card">
