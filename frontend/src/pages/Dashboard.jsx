@@ -130,8 +130,8 @@ export default function Dashboard({ theme, toggleTheme }) {
       let targetSubjectId = null;
 
       // Handle Subject
-      const subRes = await createSubject({ name: newEntry.subject, department_id: profile.dept_id, year: profile.year });
-      targetSubjectId = subRes.data.id;
+      const createSubRes = await createSubject({ name: newEntry.subject, department_id: profile.dept_id, year: profile.year });
+      targetSubjectId = createSubRes.data.id;
 
       // Handle Staff
       await createStaff({ name: newEntry.staff, department_id: profile.dept_id, subject_id: targetSubjectId });
