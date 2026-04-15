@@ -1,0 +1,117 @@
+.loader-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  background: var(--bg-color);
+}
+
+.loader-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.hex-grid {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.hex {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-sub);
+  opacity: 0.6;
+  transition: all 0.5s ease;
+  transform: translate(-50%, -50%);
+  animation: pulse-hex 3s infinite;
+}
+
+/* Center Hexagon */
+.hex.hex-center {
+  top: 50%;
+  left: 50%;
+  background: var(--primary);
+  border: none;
+  color: white;
+  opacity: 1;
+  z-index: 10;
+  width: 70px;
+  height: 70px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.hex.hex-center svg {
+  color: white;
+}
+
+/* Positioning Surrounding Hexagons */
+/* Math for pointing-up hexagons next to each other:
+   distance between centers vertically = H * 0.75
+   distance between centers horizontally = W 
+*/
+.hex-1 { top: 15%; left: 50%; animation-delay: 0s; } /* Top */
+.hex-2 { top: 32.5%; left: 80%; animation-delay: 0.5s; } /* Top Right */
+.hex-3 { top: 67.5%; left: 80%; animation-delay: 1.0s; } /* Bottom Right */
+.hex-4 { top: 85%; left: 50%; animation-delay: 1.5s; } /* Bottom */
+.hex-5 { top: 67.5%; left: 20%; animation-delay: 2.0s; } /* Bottom Left */
+.hex-6 { top: 32.5%; left: 20%; animation-delay: 2.5s; } /* Top Left */
+
+@keyframes pulse-hex {
+  0%, 100% {
+    background: var(--glass-bg);
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+    color: var(--text-sub);
+  }
+  50% {
+    background: rgba(139, 92, 246, 0.2);
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+    color: var(--primary);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 15px var(--primary-glow);
+  }
+  50% {
+    transform: translate(-50%, -55%) scale(1.05);
+    box-shadow: 0 10px 25px var(--primary-glow);
+  }
+}
+
+.loader-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  letter-spacing: 0.5px;
+  margin-top: 1rem;
+}
+
+.loader-progress-bar {
+  width: 150px;
+  height: 4px;
+  background: var(--glass-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.loader-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.3s ease-out;
+}
