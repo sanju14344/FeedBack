@@ -44,6 +44,15 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* Full-height flex column layout used by AuthFlow, Login, StudentSelect, etc. */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
 /* Centered Layout Wrapper for Auth & Select Pages */
 .landing-main {
   flex: 1;
