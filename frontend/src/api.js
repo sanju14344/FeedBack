@@ -25,8 +25,10 @@ export const rejectCR = (id) => api.post('/admin/cr/reject', { id });
 
 // Management
 export const createStaff = (data) => api.post('/admin/staff', data);
+export const updateStaff = (id, data) => api.put(`/admin/staff/${id}`, data);
 export const deleteStaff = (id) => api.delete(`/admin/staff/${id}`);
 export const createSubject = (data) => api.post('/admin/subjects', data);
+export const updateSubject = (id, data) => api.put(`/admin/subjects/${id}`, data);
 export const deleteSubject = (id) => api.delete(`/admin/subjects/${id}`);
 
 export default api;

@@ -130,3 +130,29 @@ exports.deleteSubject = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.updateStaff = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Name is required" });
+  try {
+    const { data, error } = await supabase.from('staff').update({ name }).eq('id', id).select();
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateSubject = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Name is required" });
+  try {
+    const { data, error } = await supabase.from('subjects').update({ name }).eq('id', id).select();
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

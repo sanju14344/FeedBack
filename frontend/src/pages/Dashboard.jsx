@@ -12,8 +12,10 @@ import {
   getSubjects, 
   createStaff, 
   deleteStaff, 
+  updateStaff,
   createSubject, 
   deleteSubject,
+  updateSubject,
   getDepartmentsByYear
 } from '../api';
 import { generatePDFReport } from '../utils/reportGenerator';
@@ -64,6 +66,10 @@ export default function Dashboard({ theme, toggleTheme }) {
   
   // Management Form States
   const [newEntry, setNewEntry] = useState({ subject: '', staff: '' });
+  
+  // Inline Edit States
+  const [editSubject, setEditSubject] = useState({ id: null, name: '' });
+  const [editStaff, setEditStaff] = useState({ id: null, name: '' });
 
   useEffect(() => {
     const uid = sessionStorage.getItem('cr_uid');
@@ -114,35 +120,21 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   const handleAddEntry = async (e) => {
     e.preventDefault();
-    if (!newEntry.subject && !newEntry.staff) return;
+    if (!newEntry.subject || !newEntry.staff) {
+      alert("Both Subject Name and Staff Name are strictly required to create an entry.");
+      return;
+    }
     if (!profile?.dept_id) return;
 
     try {
       let targetSubjectId = null;
 
-      // 1. Handle Subject
-      if (newEntry.subject) {
-        const existingSubject = subjects.find(s => s.name.toLowerCase() === newEntry.subject.toLowerCase());
-        if (existingSubject) {
-          targetSubjectId = existingSubject.id;
-        } else {
-          try {
-            const subRes = await createSubject({ name: newEntry.subject, department_id: profile.dept_id, year: profile.year });
-            targetSubjectId = subRes.data.id;
-          } catch (err) {
-            console.error('Failed to add subject', err);
-          }
-        }
-      }
+      // Handle Subject
+      const subRes = await createSubject({ name: newEntry.subject, department_id: profile.dept_id, year: profile.year });
+      targetSubjectId = subRes.data.id;
 
-      // 2. Handle Staff
-      if (newEntry.staff) {
-        try {
-          await createStaff({ name: newEntry.staff, department_id: profile.dept_id, subject_id: targetSubjectId });
-        } catch (err) {
-          console.error('Failed to add staff', err);
-        }
-      }
+      // Handle Staff
+      await createStaff({ name: newEntry.staff, department_id: profile.dept_id, subject_id: targetSubjectId });
 
       setNewEntry({ subject: '', staff: '' });
       const [staffRes, subRes] = await Promise.all([
@@ -165,11 +157,36 @@ export default function Dashboard({ theme, toggleTheme }) {
   };
 
   const handleDeleteSubject = async (id) => {
-    if (!window.confirm('Delete this subject?')) return;
+    if (!window.confirm('Delete this subject and ALL its staff?')) return;
     try {
       await deleteSubject(id);
       setSubjects(subjects.filter(s => s.id !== id));
+      setStaff(staff.filter(s => s.subject_id !== id));
     } catch (err) { alert('Delete failed'); }
+  };
+
+  const handleSaveEditSubject = async (id) => {
+    if (!editSubject.name.trim()) {
+      setEditSubject({ id: null, name: '' });
+      return;
+    }
+    try {
+      await updateSubject(id, { name: editSubject.name });
+      setSubjects(subjects.map(s => s.id === id ? { ...s, name: editSubject.name } : s));
+      setEditSubject({ id: null, name: '' });
+    } catch (err) { alert('Edit failed'); }
+  };
+
+  const handleSaveEditStaff = async (id) => {
+    if (!editStaff.name.trim()) {
+      setEditStaff({ id: null, name: '' });
+      return;
+    }
+    try {
+      await updateStaff(id, { name: editStaff.name });
+      setStaff(staff.map(s => s.id === id ? { ...s, name: editStaff.name } : s));
+      setEditStaff({ id: null, name: '' });
+    } catch (err) { alert('Edit failed'); }
   };
 
   const onLogout = () => {
@@ -377,9 +394,9 @@ export default function Dashboard({ theme, toggleTheme }) {
                     />
                   </div>
                   <p className="helper-text">
-                    If you only want to create a subject, you can leave staff name empty and add it later. Oh wait, both were required before. Let's make Staff Name optional if you just want a subject.
+                    Both fields are strictly required. You must define the Subject Name and assigning Staff Member exactly as they will appear to your students.
                   </p>
-                  <Button type="submit" variant="primary" className="full-width">Add Entry</Button>
+                  <Button type="submit" variant="primary" className="full-width" disabled={!newEntry.subject || !newEntry.staff}>Add Entry</Button>
                 </form>
               </GlassCard>
             </div>
@@ -387,7 +404,7 @@ export default function Dashboard({ theme, toggleTheme }) {
             <div className="manage-right">
               <GlassCard className="manage-list-card">
                 <div className="list-header">
-                  <h3 className="section-title">📂 Directory: Subjects & Staff</h3>
+                  <h3 className="section-title" style={{margin: 0}}>📂 Directory: Subjects & Staff</h3>
                   <span className="live-badge">🟢 LIVE</span>
                 </div>
                 
@@ -401,26 +418,73 @@ export default function Dashboard({ theme, toggleTheme }) {
 
                   {subjects.map(sub => {
                     const assignedStaff = staff.filter(s => s.subject_id === sub.id);
+                    const isEditingSub = editSubject.id === sub.id;
+
                     return (
                       <div key={sub.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                          <div className="item-info">
-                            <h5>📚 {sub.name}</h5>
-                            <span>Year {sub.year} • {profile.department}</span>
+                          <div className="item-info" style={{ flexGrow: 1, paddingRight: '1rem' }}>
+                            {isEditingSub ? (
+                              <input 
+                                autoFocus
+                                className="form-input" 
+                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.875rem' }} 
+                                value={editSubject.name} 
+                                onChange={(e) => setEditSubject({ ...editSubject, name: e.target.value })}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveEditSubject(sub.id)}
+                              />
+                            ) : (
+                              <h5>📚 {sub.name}</h5>
+                            )}
+                            <span style={{ display: 'block', marginTop: '4px' }}>Year {sub.year} • {profile.department}</span>
                           </div>
-                          <button className="text-btn danger" onClick={() => handleDeleteSubject(sub.id)}>Delete Subject</button>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {isEditingSub ? (
+                              <>
+                                <button className="text-btn success" style={{color: 'var(--success)'}} onClick={() => handleSaveEditSubject(sub.id)}>Save</button>
+                                <button className="text-btn" onClick={() => setEditSubject({ id: null, name: '' })}>Cancel</button>
+                              </>
+                            ) : (
+                              <button className="text-btn outline-blue" onClick={() => setEditSubject({ id: sub.id, name: sub.name })}>Edit</button>
+                            )}
+                            <button className="text-btn danger" onClick={() => handleDeleteSubject(sub.id)}>Delete</button>
+                          </div>
                         </div>
                         
                         {assignedStaff.length > 0 && (
                           <div style={{ paddingLeft: '1rem', borderLeft: '2px solid var(--glass-border)', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                            {assignedStaff.map(as => (
-                              <div key={as.id} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                                <div className="item-info">
-                                  <span style={{color: 'var(--text-main)', fontSize: '0.85rem'}}>👤 {as.name}</span>
+                            {assignedStaff.map(as => {
+                              const isEditingStaff = editStaff.id === as.id;
+                              return (
+                                <div key={as.id} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                  <div className="item-info" style={{ flexGrow: 1, paddingRight: '1rem' }}>
+                                    {isEditingStaff ? (
+                                      <input 
+                                        autoFocus
+                                        className="form-input" 
+                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }} 
+                                        value={editStaff.name} 
+                                        onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEditStaff(as.id)}
+                                      />
+                                    ) : (
+                                      <span style={{color: 'var(--text-main)', fontSize: '0.85rem'}}>👤 {as.name}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {isEditingStaff ? (
+                                      <>
+                                        <button className="text-btn success" style={{fontSize: '0.75rem', padding: '0.25rem', color: 'var(--success)'}} onClick={() => handleSaveEditStaff(as.id)}>Save</button>
+                                        <button className="text-btn" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => setEditStaff({ id: null, name: '' })}>Cancel</button>
+                                      </>
+                                    ) : (
+                                      <button className="text-btn outline-blue" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => setEditStaff({ id: as.id, name: as.name })}>Edit</button>
+                                    )}
+                                    <button className="text-btn danger" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => handleDeleteStaff(as.id)}>Remove</button>
+                                  </div>
                                 </div>
-                                <button className="text-btn danger" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => handleDeleteStaff(as.id)}>Remove</button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -428,15 +492,39 @@ export default function Dashboard({ theme, toggleTheme }) {
                   })}
 
                   {/* Staff without an assigned subject */}
-                  {staff.filter(s => !s.subject_id).map(s => (
-                    <div key={s.id} className="list-item">
-                      <div className="item-info">
-                        <h5>👤 {s.name}</h5>
-                        <span>🏠 Unassigned Staff • {profile.department}</span>
+                  {staff.filter(s => !s.subject_id).map(s => {
+                    const isEditingStaff = editStaff.id === s.id;
+                    return (
+                      <div key={s.id} className="list-item">
+                        <div className="item-info" style={{ flexGrow: 1, paddingRight: '1rem' }}>
+                          {isEditingStaff ? (
+                            <input 
+                              autoFocus
+                              className="form-input" 
+                              style={{ padding: '0.3rem 0.5rem', fontSize: '0.875rem' }} 
+                              value={editStaff.name} 
+                              onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSaveEditStaff(s.id)}
+                            />
+                          ) : (
+                            <h5>👤 {s.name}</h5>
+                          )}
+                          <span style={{ display: 'block', marginTop: '4px' }}>🏠 Unassigned Staff • {profile.department}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {isEditingStaff ? (
+                            <>
+                              <button className="text-btn success" style={{color: 'var(--success)'}} onClick={() => handleSaveEditStaff(s.id)}>Save</button>
+                              <button className="text-btn" onClick={() => setEditStaff({ id: null, name: '' })}>Cancel</button>
+                            </>
+                          ) : (
+                            <button className="text-btn outline-blue" onClick={() => setEditStaff({ id: s.id, name: s.name })}>Edit</button>
+                          )}
+                          <button className="text-btn danger" onClick={() => handleDeleteStaff(s.id)}>Delete</button>
+                        </div>
                       </div>
-                      <button className="text-btn danger" onClick={() => handleDeleteStaff(s.id)}>Delete</button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </GlassCard>
             </div>
