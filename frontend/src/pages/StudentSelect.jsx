@@ -18,6 +18,7 @@ export default function StudentSelect({ theme, toggleTheme }) {
   const [selectedDept, setSelectedDept] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Store UID in session storage so it persists across pages for this session
   useEffect(() => {
@@ -37,8 +38,12 @@ export default function StudentSelect({ theme, toggleTheme }) {
       .finally(() => setLoading(false));
   }, [selectedYear]);
 
-  const handleProceed = () => {
+  const handleProceedClick = () => {
     if (!selectedYear || !selectedDept) return;
+    setShowConfirm(true);
+  };
+
+  const confirmSelection = () => {
     sessionStorage.setItem('student_year', selectedYear);
     sessionStorage.setItem('student_dept', selectedDept);
     const dept = departments.find(d => d.id === selectedDept);
@@ -115,7 +120,7 @@ export default function StudentSelect({ theme, toggleTheme }) {
             <Button
               variant="primary"
               className="proceed-btn"
-              onClick={handleProceed}
+              onClick={handleProceedClick}
               disabled={!selectedYear || !selectedDept}
             >
               View Feedback Forms →
@@ -123,6 +128,27 @@ export default function StudentSelect({ theme, toggleTheme }) {
           </div>
         </GlassCard>
       </main>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="modal-overlay">
+          <GlassCard className="modal-content">
+            <h2 className="modal-title">Confirm Selection</h2>
+            <p className="modal-text">
+              You are proceeding as a <strong>{YEAR_LABELS[selectedYear]}</strong> student from the <strong>{departments.find(d => d.id === selectedDept)?.name}</strong> department.
+            </p>
+            <p className="modal-text warning">This cannot be changed later without starting over.</p>
+            <div className="modal-actions">
+              <Button variant="outline" onClick={() => setShowConfirm(false)}>
+                Wait, Go Back
+              </Button>
+              <Button variant="primary" onClick={confirmSelection}>
+                Confirm & Proceed
+              </Button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   );
 }

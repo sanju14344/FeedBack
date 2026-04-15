@@ -180,3 +180,59 @@
   font-size: 0.875rem;
   text-align: center;
 }
+
+/* Modal Overlay Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.modal-content {
+  max-width: 450px;
+  width: 100%;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: center;
+  animation: slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.modal-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-sub);
+}
+
+.modal-text.warning {
+  color: var(--error);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: -0.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 0.875rem;
+}
