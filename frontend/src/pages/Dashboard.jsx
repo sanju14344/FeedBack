@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
+import HexagonLoader from '../components/HexagonLoader';
 import { 
   getCrProfile, 
   getInsights, 
@@ -17,6 +18,39 @@ import {
 } from '../api';
 import { generatePDFReport } from '../utils/reportGenerator';
 import './Dashboard.css';
+
+const renderFormattedFeedback = (text) => {
+  if (!text) return null;
+  const statements = text.split('; ');
+  
+  return (
+    <div className="feedback-breakdown">
+      {statements.map((stmt, idx) => {
+        // Example: "Teacher explains clearly: 3/5 (Comment: Needs better examples)"
+        const match = stmt.match(/(.*?):\s*(\d(?:\.\d+)?)\/5(?:\s*\(Comment:\s*(.*?)\))?/i);
+        
+        if (match) {
+          const metric = match[1].trim();
+          const score = match[2];
+          const comment = match[3] ? match[3].replace(/\)$/, '').trim() : null; // Remove trailing parenthesis if caught
+          
+          return (
+            <div key={idx} className="fb-item">
+              <div className="fb-header">
+                <span className="fb-metric">{metric}</span>
+                <span className={`fb-score fb-score-${Math.round(score)}`}>{score}/5</span>
+              </div>
+              {comment && <div className="fb-comment">💬 "{comment}"</div>}
+            </div>
+          );
+        }
+        
+        // Fallback for non-matching statements
+        return <div key={idx} className="fb-item fb-fallback">{stmt}</div>;
+      })}
+    </div>
+  );
+};
 
 export default function Dashboard({ theme, toggleTheme }) {
   const navigate = useNavigate();
@@ -143,7 +177,7 @@ export default function Dashboard({ theme, toggleTheme }) {
     navigate('/');
   };
 
-  if (loading) return <div className="loading-screen">Loading dashboard...</div>;
+  if (loading) return <HexagonLoader text="Analyzing Feedback Data..." />;
 
   return (
     <div className="page-wrapper dashboard-wrapper">
@@ -305,7 +339,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                           {f.sentiment_label}
                         </span>
                       </td>
-                      <td style={{ maxWidth: '400px' }}>{f.feedback_text}</td>
+                      <td style={{ minWidth: '400px' }}>{renderFormattedFeedback(f.feedback_text)}</td>
                     </tr>
                   ))}
                 </tbody>
