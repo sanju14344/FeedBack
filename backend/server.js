@@ -19,7 +19,13 @@ app.get('/', (req, res) => {
   res.send('FeedbackPulse Node.js Backend API');
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+// Only listen when running locally (not on Vercel)
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
