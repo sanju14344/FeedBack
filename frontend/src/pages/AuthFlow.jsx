@@ -17,6 +17,9 @@ export default function AuthFlow({ theme, toggleTheme }) {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    // Guard: supabase may be null if env vars are missing in production
+    if (!supabase) return;
+
     // Listen for auth state changes (like when returning from Google OAuth)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Only navigate on explicit SIGNED_IN event, not on INITIAL_SESSION so users aren't auto-trapped
@@ -31,6 +34,10 @@ export default function AuthFlow({ theme, toggleTheme }) {
   }, [navigate]);
 
   const handleGoogleLogin = async () => {
+    if (!supabase) {
+      setError('Authentication service is not configured. Please contact support.');
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
