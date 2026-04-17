@@ -101,13 +101,6 @@ export default function Dashboard({ theme, toggleTheme }) {
   
   // Refactored Management UI States
   const [editingItem, setEditingItem] = useState({ type: null, id: null, name: '' });
-  const [expandedSubjects, setExpandedSubjects] = useState({});
-
-  const toggleSubjectList = (id, e) => {
-    // Prevent toggle if clicking on action buttons
-    if (e.target.closest('.action-icon-btn')) return;
-    setExpandedSubjects(prev => ({ ...prev, [id]: !prev[id] }));
-  };
 
   useEffect(() => {
     const uid = sessionStorage.getItem('cr_uid');
@@ -526,57 +519,54 @@ export default function Dashboard({ theme, toggleTheme }) {
 
                   {subjects.map(sub => {
                     const assignedStaff = staff.filter(s => s.subject_id === sub.id);
-                    const isExpanded = !!expandedSubjects[sub.id];
 
                     return (
-                      <div key={sub.id} className="subject-folder-card">
-                        <div className="subject-folder-header" onClick={(e) => toggleSubjectList(sub.id, e)} style={{cursor: 'pointer'}}>
-                          <div className="subject-info">
-                            <div className="folder-icon">{isExpanded ? '📂' : '📁'}</div>
-                            <div className="folder-details">
-                              <h5>{sub.name}</h5>
-                              <span>Year {sub.year} • {profile.department} • {assignedStaff.length} Staff</span>
-                            </div>
+                      <div key={sub.id} className="inline-dir-row">
+                        {/* Left: Subject Info */}
+                        <div className="dir-subject">
+                          <div className="dir-icon">📚</div>
+                          <div className="dir-meta">
+                            <div className="dir-title">{sub.name}</div>
+                            <div className="dir-subtitle">Year {sub.year} • {profile.department}</div>
                           </div>
                           
-                          <div className="folder-actions actions-group">
-                            <button className="action-icon-btn edit" title="Edit Subject" onClick={() => setEditingItem({ type: 'subject', id: sub.id, name: sub.name })}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
+                          <div className="dir-actions">
+                            <button className="icon-btn edit" title="Edit Subject" onClick={() => setEditingItem({ type: 'subject', id: sub.id, name: sub.name })}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
                             </button>
-                            <button className="action-icon-btn delete" title="Delete Subject" onClick={() => handleDeleteSubject(sub.id)}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <button className="icon-btn delete" title="Delete Subject" onClick={() => handleDeleteSubject(sub.id)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
-                            <div className={`folder-chevron ${isExpanded ? 'rotated' : ''}`}>
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
                           </div>
                         </div>
-                        
-                        <div className={`staff-tree-collapse ${isExpanded ? 'expanded' : ''}`}>
+
+                        {/* Middle: Connecting UI */}
+                        <div className="dir-connector">
+                          <div className="connector-line"></div>
+                          <div className="connector-dot"></div>
+                        </div>
+
+                        {/* Right: Staff Info */}
+                        <div className="dir-staff-container">
                           {assignedStaff.length > 0 ? (
-                            <div className="staff-tree">
-                              {assignedStaff.map(as => {
-                                return (
-                                  <div key={as.id} className="staff-node">
-                                    <div className="staff-node-line"></div>
-                                    <div className="staff-info">
-                                      <div className="staff-avatar">{as.name.substring(0,2).toUpperCase()}</div>
-                                      <span style={{color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 600, flexGrow: 1}}>{as.name}</span>
-                                    </div>
-                                    <div className="actions-group">
-                                      <button className="action-icon-btn edit" style={{width: '28px', height: '28px'}} onClick={() => setEditingItem({ type: 'staff', id: as.id, name: as.name })}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
-                                      </button>
-                                      <button className="action-icon-btn delete" style={{width: '28px', height: '28px'}} onClick={() => handleDeleteStaff(as.id)}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                            assignedStaff.map(as => (
+                              <div key={as.id} className="dir-staff-pill">
+                                <div className="staff-avatar">{as.name.substring(0,2).toUpperCase()}</div>
+                                <span className="staff-name">{as.name}</span>
+                                <div className="dir-actions staff-actions">
+                                  <button className="icon-btn edit" title="Edit Staff" onClick={() => setEditingItem({ type: 'staff', id: as.id, name: as.name })}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
+                                  </button>
+                                  <button className="icon-btn delete" title="Remove Staff" onClick={() => handleDeleteStaff(as.id)}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                  </button>
+                                </div>
+                              </div>
+                            ))
                           ) : (
-                            <div className="empty-staff-msg">No staff currently assigned to this subject.</div>
+                            <div className="dir-staff-empty">
+                              <span>Unassigned</span>
+                            </div>
                           )}
                         </div>
                       </div>
