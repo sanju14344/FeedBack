@@ -1,79 +1,80 @@
-:root {
-  /* Typography */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  
-  /* Light Mode Palette */
-  --bg-color: #f0f4f8;
-  --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
-  --text-main: #1e293b;
-  --text-sub: #64748b;
-  --text-muted: #94a3b8;
-  
-  /* Brand Colors */
-  --primary: #8b5cf6;
-  --primary-glow: rgba(139, 92, 246, 0.4);
-  --secondary: #a855f7;
-  
-  /* Status Colors */
-  --success: #22c55e;
-  --success-bg: rgba(34, 197, 94, 0.15);
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --error: #ef4444;
-  --error-bg: rgba(239, 68, 68, 0.15);
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-  /* Glassmorphism Light */
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.8);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-  --input-bg: rgba(255, 255, 255, 0.9);
-  
-  /* Component tokens */
-  --border-radius: 16px;
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+:root {
+  --font-primary: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+
+  /* === LIGHT PALETTE === */
+  --bg-color:      #f4f6fb;
+  --bg-surface:    #ffffff;
+  --bg-elevated:   #f0f2f8;
+
+  --text-main:     #0d1117;
+  --text-sub:      #4b5563;
+  --text-muted:    #9ca3af;
+
+  /* Brand */
+  --primary:       #7c3aed;
+  --primary-light: #a78bfa;
+  --primary-glow:  rgba(124,58,237,0.35);
+  --accent:        #06b6d4;
+  --accent-glow:   rgba(6,182,212,0.3);
+  --gradient:      linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+
+  /* Status */
+  --success:       #10b981;
+  --success-bg:    rgba(16,185,129,0.12);
+  --warning:       #f59e0b;
+  --warning-bg:    rgba(245,158,11,0.12);
+  --error:         #ef4444;
+  --error-bg:      rgba(239,68,68,0.12);
+
+  /* Glass — light */
+  --glass-bg:     rgba(255,255,255,0.75);
+  --glass-border: rgba(124,58,237,0.12);
+  --glass-shadow: 0 4px 24px rgba(13,17,23,0.08);
+  --input-bg:     rgba(255,255,255,0.95);
+
+  /* Component */
+  --border-radius: 14px;
+  --transition:    all 0.22s cubic-bezier(0.4,0,0.2,1);
 }
 
 [data-theme='dark'] {
-  /* Dark Mode Palette */
-  --bg-color: #0f172a;
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-  --text-main: #f8fafc;
-  --text-sub: #94a3b8;
-  --text-muted: #64748b;
+  /* === DARK PALETTE === */
+  --bg-color:      #080d16;
+  --bg-surface:    #0f1623;
+  --bg-elevated:   #161e30;
 
-  /* Glassmorphism Dark */
-  --glass-bg: rgba(30, 41, 59, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-  --input-bg: rgba(15, 23, 42, 0.8);
+  --text-main:     #e8edf5;
+  --text-sub:      #8b95a8;
+  --text-muted:    #4b5563;
+
+  /* Glass — dark */
+  --glass-bg:     rgba(15,22,35,0.75);
+  --glass-border: rgba(124,58,237,0.18);
+  --glass-shadow: 0 4px 32px rgba(0,0,0,0.5);
+  --input-bg:     rgba(8,13,22,0.85);
 }
 
-/* Base resets & utilities */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ---- Base resets ---- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   background: var(--bg-color);
-  background-image: var(--bg-gradient);
   color: var(--text-main);
   min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  line-height: 1.5;
+  transition: background-color 0.3s, color 0.3s;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
+a { text-decoration: none; color: inherit; }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: var(--gradient);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

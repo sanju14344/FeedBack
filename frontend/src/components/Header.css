@@ -1,92 +1,105 @@
+/* Header */
 .site-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
+  padding: 0 2.5rem;
+  height: 64px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .logo-text {
-  font-size: 1.5rem;
+  font-family: var(--font-primary);
+  font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--primary);
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  cursor: pointer;
 }
 
-.header-right {
+.header-left, .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+}
+
+.user-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  padding: 0.4rem 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
 }
 
 .pill-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.45rem 1.1rem;
   border-radius: 9999px;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  background: transparent;
+  border: none;
+  font-family: var(--font-body);
 }
 
 .pill-btn.outline {
+  background: transparent;
+  border: 1px solid var(--glass-border);
   color: var(--text-main);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .pill-btn.outline:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-1px);
+  background: var(--bg-elevated);
+  border-color: var(--primary-light);
+  color: var(--primary);
 }
 
 .pill-btn.danger {
-  color: var(--text-main);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #ef4444;
 }
 
 .pill-btn.danger:hover {
-  background: var(--error-bg);
-  color: var(--error);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239,68,68,0.2);
+}
+
+.pill-btn.admin-login-btn {
+  background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.12));
+  border-color: rgba(124,58,237,0.3);
+  color: var(--primary);
 }
 
 .back-btn {
   display: flex;
   align-items: center;
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.user-badge {
-  background: var(--glass-bg);
+  gap: 0.5rem;
+  background: transparent;
   border: 1px solid var(--glass-border);
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
   color: var(--text-sub);
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: var(--transition);
 }
 
-@media (max-width: 768px) {
-  .admin-login-btn {
-    display: none !important;
-  }
+.back-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-main);
 }

@@ -422,13 +422,8 @@ export default function Dashboard({ theme, toggleTheme }) {
                       <td>{f.subjects?.name || 'Unknown'}</td>
                       <td>{f.staff?.name || 'N/A'}</td>
                       <td>
-                        <span className={`sentiment-badge ${f.sentiment_label?.toLowerCase() === 'positive' ? 'tag-success' : f.sentiment_label?.toLowerCase() === 'negative' ? 'tag-error' : 'tag-neutral'}`}
-                          style={{ 
-                            background: f.sentiment_label === 'Positive' ? 'var(--success-bg)' : f.sentiment_label === 'Negative' ? 'var(--error-bg)' : 'rgba(0,0,0,0.05)',
-                            color: f.sentiment_label === 'Positive' ? 'var(--success)' : f.sentiment_label === 'Negative' ? 'var(--error)' : 'var(--text-sub)'
-                          }}
-                        >
-                          {f.sentiment_label}
+                        <span className={`sentiment-badge ${f.sentiment_label?.toLowerCase() === 'positive' ? 'badge-positive' : f.sentiment_label?.toLowerCase() === 'negative' ? 'badge-negative' : 'badge-neutral'}`}>
+                          {f.sentiment_label === 'Positive' ? '✓' : f.sentiment_label === 'Negative' ? '✕' : '○'} {f.sentiment_label}
                         </span>
                       </td>
                       <td style={{ minWidth: '400px' }}>{renderFormattedFeedback(f.feedback_text)}</td>
