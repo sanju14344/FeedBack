@@ -94,6 +94,7 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [staff, setStaff] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Management Form States
   const [newEntry, setNewEntry] = useState({ subject: '', staff: '' });
@@ -224,6 +225,23 @@ export default function Dashboard({ theme, toggleTheme }) {
       setStaff(staff.map(s => s.id === id ? { ...s, name: editStaff.name } : s));
       setEditStaff({ id: null, name: '' });
     } catch (err) { alert('Edit failed'); }
+  };
+
+  const refreshDirectory = async () => {
+    if (!profile?.dept_id) return;
+    setIsRefreshing(true);
+    try {
+      const [staffRes, subRes] = await Promise.all([
+        getStaff(profile.dept_id),
+        getSubjects(profile.dept_id)
+      ]);
+      setStaff(staffRes.data);
+      setSubjects(subRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
   };
 
   const onLogout = () => {
@@ -482,8 +500,14 @@ export default function Dashboard({ theme, toggleTheme }) {
             <div className="manage-right">
               <GlassCard className="manage-list-card">
                 <div className="list-header">
-                  <h3 className="section-title" style={{margin: 0}}>📂 Directory: Subjects & Staff</h3>
-                  <span className="live-badge">🟢 LIVE</span>
+                  <h3 className="section-title" style={{margin: 0}}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight: '8px', verticalAlign: 'middle'}}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    Subject Directory
+                  </h3>
+                  <button className="refresh-btn" onClick={refreshDirectory} disabled={isRefreshing}>
+                    <svg className={isRefreshing ? 'spin' : ''} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Refresh
+                  </button>
                 </div>
                 
                 <div className="manage-list">
@@ -499,66 +523,90 @@ export default function Dashboard({ theme, toggleTheme }) {
                     const isEditingSub = editSubject.id === sub.id;
 
                     return (
-                      <div key={sub.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                          <div className="item-info" style={{ flexGrow: 1, paddingRight: '1rem' }}>
-                            {isEditingSub ? (
-                              <input 
-                                autoFocus
-                                className="form-input" 
-                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.875rem' }} 
-                                value={editSubject.name} 
-                                onChange={(e) => setEditSubject({ ...editSubject, name: e.target.value })}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSaveEditSubject(sub.id)}
-                              />
-                            ) : (
-                              <h5>📚 {sub.name}</h5>
-                            )}
-                            <span style={{ display: 'block', marginTop: '4px' }}>Year {sub.year} • {profile.department}</span>
+                      <div key={sub.id} className="subject-folder-card">
+                        <div className="subject-folder-header">
+                          <div className="subject-info">
+                            <div className="folder-icon">📂</div>
+                            <div className="folder-details">
+                              {isEditingSub ? (
+                                <input 
+                                  autoFocus
+                                  className="form-input" 
+                                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.875rem' }} 
+                                  value={editSubject.name} 
+                                  onChange={(e) => setEditSubject({ ...editSubject, name: e.target.value })}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleSaveEditSubject(sub.id)}
+                                />
+                              ) : (
+                                <h5>{sub.name}</h5>
+                              )}
+                              <span>Year {sub.year} • {profile.department}</span>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          
+                          <div className="folder-actions actions-group">
                             {isEditingSub ? (
                               <>
-                                <button className="text-btn success" style={{color: 'var(--success)'}} onClick={() => handleSaveEditSubject(sub.id)}>Save</button>
-                                <button className="text-btn" onClick={() => setEditSubject({ id: null, name: '' })}>Cancel</button>
+                                <button className="action-icon-btn save" title="Save" onClick={() => handleSaveEditSubject(sub.id)}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </button>
+                                <button className="action-icon-btn" title="Cancel" onClick={() => setEditSubject({ id: null, name: '' })}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
                               </>
                             ) : (
-                              <button className="text-btn outline-blue" onClick={() => setEditSubject({ id: sub.id, name: sub.name })}>Edit</button>
+                              <button className="action-icon-btn edit" title="Edit Subject" onClick={() => setEditSubject({ id: sub.id, name: sub.name })}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
+                              </button>
                             )}
-                            <button className="text-btn danger" onClick={() => handleDeleteSubject(sub.id)}>Delete</button>
+                            <button className="action-icon-btn delete" title="Delete Subject" onClick={() => handleDeleteSubject(sub.id)}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                           </div>
                         </div>
                         
                         {assignedStaff.length > 0 && (
-                          <div style={{ paddingLeft: '1rem', borderLeft: '2px solid var(--glass-border)', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <div className="staff-tree">
                             {assignedStaff.map(as => {
                               const isEditingStaff = editStaff.id === as.id;
                               return (
-                                <div key={as.id} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                                  <div className="item-info" style={{ flexGrow: 1, paddingRight: '1rem' }}>
-                                    {isEditingStaff ? (
-                                      <input 
-                                        autoFocus
-                                        className="form-input" 
-                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }} 
-                                        value={editStaff.name} 
-                                        onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEditStaff(as.id)}
-                                      />
-                                    ) : (
-                                      <span style={{color: 'var(--text-main)', fontSize: '0.85rem'}}>👤 {as.name}</span>
-                                    )}
+                                <div key={as.id} className="staff-node">
+                                  <div className="staff-node-line"></div>
+                                  <div className="staff-info">
+                                    <div className="staff-avatar">{as.name.substring(0,2).toUpperCase()}</div>
+                                    <div style={{flexGrow: 1}}>
+                                      {isEditingStaff ? (
+                                        <input 
+                                          autoFocus
+                                          className="form-input" 
+                                          style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }} 
+                                          value={editStaff.name} 
+                                          onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
+                                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEditStaff(as.id)}
+                                        />
+                                      ) : (
+                                        <span style={{color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600}}>{as.name}</span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <div className="actions-group">
                                     {isEditingStaff ? (
                                       <>
-                                        <button className="text-btn success" style={{fontSize: '0.75rem', padding: '0.25rem', color: 'var(--success)'}} onClick={() => handleSaveEditStaff(as.id)}>Save</button>
-                                        <button className="text-btn" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => setEditStaff({ id: null, name: '' })}>Cancel</button>
+                                        <button className="action-icon-btn save" style={{width: '28px', height: '28px'}} onClick={() => handleSaveEditStaff(as.id)}>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        </button>
+                                        <button className="action-icon-btn" style={{width: '28px', height: '28px'}} onClick={() => setEditStaff({ id: null, name: '' })}>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
                                       </>
                                     ) : (
-                                      <button className="text-btn outline-blue" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => setEditStaff({ id: as.id, name: as.name })}>Edit</button>
+                                      <button className="action-icon-btn edit" style={{width: '28px', height: '28px'}} onClick={() => setEditStaff({ id: as.id, name: as.name })}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
+                                      </button>
                                     )}
-                                    <button className="text-btn danger" style={{fontSize: '0.75rem', padding: '0.25rem'}} onClick={() => handleDeleteStaff(as.id)}>Remove</button>
+                                    <button className="action-icon-btn delete" style={{width: '28px', height: '28px'}} onClick={() => handleDeleteStaff(as.id)}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
                                   </div>
                                 </div>
                               );
