@@ -69,7 +69,7 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [newEntry, setNewEntry] = useState({ subject: '', staff: '' });
   
   // Refactored Management UI States
-  const [editingItem, setEditingItem] = useState({ type: null, id: null, name: '' });
+  const [editingItem, setEditingItem] = useState({ type: null, subId: null, subName: '', staffId: null, staffName: '' });
 
   useEffect(() => {
     const uid = sessionStorage.getItem('cr_uid');
@@ -172,19 +172,35 @@ export default function Dashboard({ theme, toggleTheme }) {
   };
 
   const handleSaveModalEdit = async () => {
-    if (!editingItem.name.trim()) {
-      setEditingItem({ type: null, id: null, name: '' });
-      return;
-    }
     try {
-      if (editingItem.type === 'subject') {
-        await updateSubject(editingItem.id, { name: editingItem.name });
-        setSubjects(subjects.map(s => s.id === editingItem.id ? { ...s, name: editingItem.name } : s));
-      } else if (editingItem.type === 'staff') {
-        await updateStaff(editingItem.id, { name: editingItem.name });
-        setStaff(staff.map(s => s.id === editingItem.id ? { ...s, name: editingItem.name } : s));
+      if (editingItem.type === 'assignment') {
+        const promises = [];
+        
+        // Check if subject name changed and is not empty
+        if (editingItem.subName.trim() && editingItem.subName !== subjects.find(s => s.id === editingItem.subId)?.name) {
+          promises.push(
+            updateSubject(editingItem.subId, { name: editingItem.subName })
+              .then(() => setSubjects(prev => prev.map(s => s.id === editingItem.subId ? { ...s, name: editingItem.subName } : s)))
+          );
+        }
+        
+        // Check if staff existed, changed, and is not empty
+        if (editingItem.staffId && editingItem.staffName.trim() && editingItem.staffName !== staff.find(s => s.id === editingItem.staffId)?.name) {
+          promises.push(
+            updateStaff(editingItem.staffId, { name: editingItem.staffName })
+              .then(() => setStaff(prev => prev.map(s => s.id === editingItem.staffId ? { ...s, name: editingItem.staffName } : s)))
+          );
+        }
+
+        await Promise.all(promises);
+      } else if (editingItem.type === 'staff') { // Legacy support for unassigned staff (if any)
+        if (editingItem.staffName.trim()) {
+           await updateStaff(editingItem.staffId, { name: editingItem.staffName });
+           setStaff(staff.map(s => s.id === editingItem.staffId ? { ...s, name: editingItem.staffName } : s));
+        }
       }
-      setEditingItem({ type: null, id: null, name: '' });
+      
+      setEditingItem({ type: null, subId: null, subName: '', staffId: null, staffName: '' });
     } catch (err) {
       alert('Edit failed');
     }
@@ -524,25 +540,18 @@ export default function Dashboard({ theme, toggleTheme }) {
                         
                         {/* Far Right: Unified Actions */}
                         <div className="dir-unified-actions">
-                          <button className="icon-btn edit" title="Edit Subject" onClick={() => setEditingItem({ type: 'subject', id: sub.id, name: sub.name })}>
+                          <button className="icon-btn edit" title="Edit Assignment" onClick={() => setEditingItem({ 
+                              type: 'assignment', 
+                              subId: sub.id, 
+                              subName: sub.name, 
+                              staffId: assignedStaff.length > 0 ? assignedStaff[0].id : null,
+                              staffName: assignedStaff.length > 0 ? assignedStaff[0].name : ''
+                            })}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
                           </button>
-                          <button className="icon-btn delete" title="Delete Subject" onClick={() => handleDeleteSubject(sub.id)}>
+                          <button className="icon-btn delete" title="Delete Assignment" onClick={() => handleDeleteSubject(sub.id)}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
-                          
-                          {assignedStaff.length > 0 && <div className="action-divider"></div>}
-                          
-                          {assignedStaff.map(as => (
-                            <React.Fragment key={'action-'+as.id}>
-                              <button className="icon-btn edit staff-edit" title={`Edit Staff: ${as.name}`} onClick={() => setEditingItem({ type: 'staff', id: as.id, name: as.name })}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
-                              </button>
-                              <button className="icon-btn delete staff-delete" title={`Remove Staff: ${as.name}`} onClick={() => handleDeleteStaff(as.id)}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                              </button>
-                            </React.Fragment>
-                          ))}
                         </div>
                       </div>
                     );
@@ -591,18 +600,55 @@ export default function Dashboard({ theme, toggleTheme }) {
         {editingItem.type && (
           <div className="edit-modal-overlay">
             <div className="edit-modal-card">
-              <h3 style={{margin: '0 0 1rem 0'}}>
-                Edit {editingItem.type === 'subject' ? 'Subject Name' : 'Staff Member Name'}
+              <h3 style={{margin: '0 0 1.5rem 0', color: 'var(--text-main)'}}>
+                {editingItem.type === 'assignment' ? 'Edit Assignment' : 'Edit Staff'}
               </h3>
-              <input 
-                autoFocus
-                className="modal-input" 
-                value={editingItem.name}
-                onChange={e => setEditingItem(prev => ({ ...prev, name: e.target.value }))}
-                onKeyDown={e => e.key === 'Enter' && handleSaveModalEdit()}
-              />
-              <div className="modal-actions">
-                <button className="btn-modal-cancel" onClick={() => setEditingItem({ type: null, id: null, name: '' })}>Cancel</button>
+              
+              {editingItem.type === 'assignment' && (
+                <>
+                  <div style={{ paddingBottom: '1rem' }}>
+                    <label className="form-subtitle" style={{ display: 'block', marginBottom: '0.25rem' }}>Subject Name</label>
+                    <input 
+                      autoFocus
+                      className="modal-input" 
+                      style={{ marginBottom: 0 }}
+                      value={editingItem.subName}
+                      onChange={e => setEditingItem(prev => ({ ...prev, subName: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveModalEdit()}
+                    />
+                  </div>
+                  
+                  {editingItem.staffId && (
+                    <div style={{ paddingBottom: '1.5rem' }}>
+                      <label className="form-subtitle" style={{ display: 'block', marginBottom: '0.25rem' }}>Staff Name</label>
+                      <input 
+                        className="modal-input" 
+                        style={{ marginBottom: 0 }}
+                        value={editingItem.staffName}
+                        onChange={e => setEditingItem(prev => ({ ...prev, staffName: e.target.value }))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveModalEdit()}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {editingItem.type === 'staff' && (
+                <div style={{ paddingBottom: '1.5rem' }}>
+                    <label className="form-subtitle" style={{ display: 'block', marginBottom: '0.25rem' }}>Staff Name</label>
+                    <input 
+                      autoFocus
+                      className="modal-input" 
+                      style={{ marginBottom: 0 }}
+                      value={editingItem.staffName}
+                      onChange={e => setEditingItem(prev => ({ ...prev, staffName: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveModalEdit()}
+                    />
+                </div>
+              )}
+
+              <div className="modal-actions" style={editingItem.type === 'assignment' && !editingItem.staffId ? { marginTop: '0.5rem' } : {}}>
+                <button className="btn-modal-cancel" onClick={() => setEditingItem({ type: null, subId: null, subName: '', staffId: null, staffName: '' })}>Cancel</button>
                 <button className="btn-modal-save" onClick={handleSaveModalEdit}>Save Changes</button>
               </div>
             </div>
