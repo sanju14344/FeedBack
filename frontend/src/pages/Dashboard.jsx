@@ -512,7 +512,6 @@ export default function Dashboard({ theme, toggleTheme }) {
                           <div className="dir-icon">📚</div>
                           <div className="dir-meta">
                             <div className="dir-title">{sub.name}</div>
-                            <div className="dir-subtitle" style={{ fontSize: '0.7rem' }}>Year {sub.year} • {profile.department}</div>
                           </div>
                         </div>
 

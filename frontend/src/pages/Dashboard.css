@@ -663,12 +663,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0 1.25rem;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.inline-dir-row:hover .dir-unified-actions { 
-  opacity: 1; 
+  opacity: 1; /* Always show by default */
 }
 
 .action-divider {
