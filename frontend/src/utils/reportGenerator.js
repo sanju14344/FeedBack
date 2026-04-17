@@ -1,8 +1,9 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const generatePDFReport = (profile, insights, feedbackList) => {
-  const doc = new jsPDF();
+  try {
+    const doc = new jsPDF();
   
   // Custom brand colors
   const primaryColor = [74, 43, 142]; // #4a2b8e
@@ -128,7 +129,7 @@ export const generatePDFReport = (profile, insights, feedbackList) => {
     f.feedback_text
   ]) || [];
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [['Date', 'Subject', 'Staff', 'Sentiment', 'Feedback']],
     body: tableData,
@@ -157,4 +158,8 @@ export const generatePDFReport = (profile, insights, feedbackList) => {
   });
 
   doc.save(`FeedbackPulse_Report_${profile?.department || 'Dept'}.pdf`);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    alert("Failed to generate PDF. Please try again.");
+  }
 };

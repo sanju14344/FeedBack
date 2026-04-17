@@ -83,38 +83,44 @@ export default function Dashboard({ theme, toggleTheme }) {
   const fetchData = async (uid) => {
     setLoading(true);
     try {
+      // 1. Fetch Profile (Critical)
       const profileRes = await getCrProfile(uid);
       const prof = profileRes.data;
       setProfile(prof);
 
       if (prof.department) {
-        // Fetch all related data
-        const [fbRes, insightRes] = await Promise.all([
-          getFeedbackLogs(prof.department),
-          getInsights(prof.department)
-        ]);
+        // NON-BLOCKING 1: Fetch AI insights asynchronously without blocking UI load
+        getInsights(prof.department)
+          .then(insightRes => setInsights(insightRes.data))
+          .catch(err => console.error("Error fetching insights:", err));
+
+        // 2. Fetch Feedback (Critical for UI)
+        const fbRes = await getFeedbackLogs(prof.department);
         setFeedback(fbRes.data);
-        setInsights(insightRes.data);
         
-        // Fetch management data
-        // We need the department ID for creation
-        const deptsRes = await getDepartmentsByYear(prof.year);
-        const myDept = deptsRes.data.find(d => d.name === prof.department);
+        // UNBLOCK THE UI NOW - we have enough to render Analytics & Feedback tabs!
+        setLoading(false);
+
+        // NON-BLOCKING 2: Fetch Management data in the background
+        getDepartmentsByYear(prof.year).then(async (deptsRes) => {
+          const myDept = deptsRes.data.find(d => d.name === prof.department);
+          if (myDept) {
+            setProfile(prev => ({ ...prev, dept_id: myDept.id })); // update profile with dept_id
+            const [staffRes, subRes] = await Promise.all([
+              getStaff(myDept.id),
+              getSubjects(myDept.id)
+            ]);
+            setStaff(staffRes.data);
+            setSubjects(subRes.data);
+          }
+        }).catch(err => console.error("Error fetching management data:", err));
         
-        if (myDept) {
-          const [staffRes, subRes] = await Promise.all([
-            getStaff(myDept.id),
-            getSubjects(myDept.id)
-          ]);
-          setStaff(staffRes.data);
-          setSubjects(subRes.data);
-          setProfile(prev => ({ ...prev, dept_id: myDept.id }));
-        }
+        return; // Early return so we don't hit the finally block twice
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
-      setLoading(false);
+      if (loading) setLoading(false);
     }
   };
 
@@ -251,7 +257,7 @@ export default function Dashboard({ theme, toggleTheme }) {
               </GlassCard>
               <GlassCard className="stat-card">
                 <div className="stat-title">SATISFACTION</div>
-                <div className="stat-val">{insights?.satisfaction_score || 0}%</div>
+                <div className="stat-val">{insights ? `${insights.satisfaction_score}%` : '--%'}</div>
                 <div className="stat-line bg-black"></div>
               </GlassCard>
             </div>
@@ -291,36 +297,77 @@ export default function Dashboard({ theme, toggleTheme }) {
                     </div>
                   </div>
                 </>
+              ) : !insights ? (
+                <p className="empty-text">Generating AI Insights...</p>
               ) : (
                 <p className="empty-text">No enough feedback for AI analysis yet.</p>
               )}
             </GlassCard>
 
             <div className="charts-grid">
-              <GlassCard className="chart-card">
+              <GlassCard className="chart-card sentiment-card">
                 <h3 className="section-title">Sentiment Distribution</h3>
-                <div className="chart-container">
-                  <div className="donut-legend">
-                    <span className="legend-item"><span className="legend-box bg-success"></span> Positive</span>
-                    <span className="legend-item"><span className="legend-box bg-warning"></span> Neutral</span>
-                    <span className="legend-item"><span className="legend-box bg-error"></span> Negative</span>
+                <div className="chart-layout">
+                  <div className="donut-chart-wrapper">
+                    <div className="donut-chart" style={{ 
+                      '--pos': `${(feedback.filter(f => f.sentiment_label === 'Positive').length / (feedback.length || 1)) * 100}%`,
+                      '--neu': `${(feedback.filter(f => f.sentiment_label === 'Neutral').length / (feedback.length || 1)) * 100}%`,
+                      '--neg': `${(feedback.filter(f => f.sentiment_label === 'Negative').length / (feedback.length || 1)) * 100}%`
+                    }}></div>
+                    <div className="donut-inner">
+                      <span className="donut-number">{feedback.length}</span>
+                      <span className="donut-label">Reviews</span>
+                    </div>
                   </div>
-                  <div className="donut-chart" style={{ 
-                    '--pos': `${(feedback.filter(f => f.sentiment_label === 'Positive').length / (feedback.length || 1)) * 100}%`,
-                    '--neu': `${(feedback.filter(f => f.sentiment_label === 'Neutral').length / (feedback.length || 1)) * 100}%`,
-                    '--neg': `${(feedback.filter(f => f.sentiment_label === 'Negative').length / (feedback.length || 1)) * 100}%`
-                  }}></div>
+                  
+                  <div className="rich-legend">
+                    {[
+                      { label: 'Positive', count: feedback.filter(f => f.sentiment_label === 'Positive').length, colorClass: 'success' },
+                      { label: 'Neutral', count: feedback.filter(f => f.sentiment_label === 'Neutral').length, colorClass: 'warning' },
+                      { label: 'Negative', count: feedback.filter(f => f.sentiment_label === 'Negative').length, colorClass: 'error' }
+                    ].map(item => {
+                      const perc = Math.round((item.count / (feedback.length || 1)) * 100);
+                      return (
+                        <div key={item.label} className={`legend-row ${item.colorClass}-row`}>
+                          <div className="legend-left">
+                            <span className={`legend-dot bg-${item.colorClass}`}></span>
+                            <span className="legend-name">{item.label}</span>
+                          </div>
+                          <div className="legend-right">
+                            <span className="legend-count">{item.count}</span>
+                            <span className="legend-perc">{perc}%</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </GlassCard>
               
               <GlassCard className="chart-card">
-                <h3 className="section-title">Complaints (AI Detected)</h3>
-                <div className="keyword-tags">
-                  {insights?.top_complaint_phrases?.map((kw, i) => (
-                    <span key={i} className="kw-tag tag-error" style={{ background: 'var(--error-bg)', color: 'var(--error)' }}>{kw}</span>
-                  ))}
-                  {(!insights?.top_complaint_phrases || insights.top_complaint_phrases.length === 0) && <p className="empty-text">No major complaints detected.</p>}
-                </div>
+                <h3 className="section-title">
+                  <span role="img" aria-label="warning" style={{marginRight: '8px'}}>🚨</span> 
+                  Top Complaints Detected
+                </h3>
+                {!insights ? (
+                  <p className="empty-text">Analyzing complaints...</p>
+                ) : insights?.top_complaint_phrases?.length > 0 ? (
+                  <div className="complaints-list">
+                    {insights.top_complaint_phrases.map((kw, i) => (
+                      <div key={i} className="complaint-item">
+                        <div className="complaint-icon text-error">
+                          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <span className="complaint-text">{kw}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state-small">
+                    <span className="empty-emoji">🎉</span>
+                    <p className="empty-text">No major complaints detected.</p>
+                  </div>
+                )}
               </GlassCard>
             </div>
           </>
