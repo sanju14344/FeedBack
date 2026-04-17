@@ -21,66 +21,35 @@ import {
 import { generatePDFReport } from '../utils/reportGenerator';
 import './Dashboard.css';
 
-const FeedbackCell = ({ text }) => {
-  const [expanded, setExpanded] = useState(false);
-  
+const renderFormattedFeedback = (text) => {
   if (!text) return null;
   const statements = text.split('; ');
   
-  const ratings = [];
-  const fallbacks = [];
-  
-  statements.forEach((stmt) => {
-    const match = stmt.match(/(.*?):\s*(\d(?:\.\d+)?)\/5(?:\s*\(Comment:\s*(.*?)\))?/i);
-    if (match) {
-      ratings.push({
-        metric: match[1].trim(),
-        score: match[2],
-        comment: match[3] ? match[3].replace(/\)$/, '').trim() : null
-      });
-    } else if (stmt.trim()) {
-      fallbacks.push(stmt.trim());
-    }
-  });
-
   return (
-    <div className="feedback-cell-wrapper">
-      {fallbacks.length > 0 && (
-        <div className="general-comments">
-          {fallbacks.map((fb, idx) => {
-             const cleanFb = fb.startsWith('General Comment:') ? fb.replace('General Comment:', '').trim() : fb;
-             return cleanFb ? <div key={idx} className="student-comment-box">❝ {cleanFb} ❞</div> : null;
-          })}
-        </div>
-      )}
-      
-      {ratings.length > 0 && (
-        <div className="ratings-section">
-           {!expanded && fallbacks.length === 0 && (
-              <span className="ratings-summary-text">Contains {ratings.length} detailed metric ratings</span>
-           )}
-           <button 
-             className="toggle-ratings-btn" 
-             onClick={() => setExpanded(!expanded)}
-           >
-             {expanded ? '▲ Hide Breakdown' : '⚡ View Rating Breakdown'}
-           </button>
-           
-           {expanded && (
-             <div className="ratings-breakdown-grid">
-               {ratings.map((r, idx) => (
-                 <div key={idx} className="compact-rating">
-                   <div className="compact-rating-content">
-                     <span className="cr-metric" title={r.metric}>{r.metric}</span>
-                     <span className={`cr-score score-${Math.round(r.score)}`}>{r.score}/5</span>
-                   </div>
-                   {r.comment && <div className="cr-comment">💬 {r.comment}</div>}
-                 </div>
-               ))}
-             </div>
-           )}
-        </div>
-      )}
+    <div className="feedback-breakdown">
+      {statements.map((stmt, idx) => {
+        // Example: "Teacher explains clearly: 3/5 (Comment: Needs better examples)"
+        const match = stmt.match(/(.*?):\s*(\d(?:\.\d+)?)\/5(?:\s*\(Comment:\s*(.*?)\))?/i);
+        
+        if (match) {
+          const metric = match[1].trim();
+          const score = match[2];
+          const comment = match[3] ? match[3].replace(/\)$/, '').trim() : null; // Remove trailing parenthesis if caught
+          
+          return (
+            <div key={idx} className="fb-item">
+              <div className="fb-header">
+                <span className="fb-metric">{metric}</span>
+                <span className={`fb-score fb-score-${Math.round(score)}`}>{score}/5</span>
+              </div>
+              {comment && <div className="fb-comment">💬 "{comment}"</div>}
+            </div>
+          );
+        }
+        
+        // Fallback for non-matching statements
+        return <div key={idx} className="fb-item fb-fallback">{stmt}</div>;
+      })}
     </div>
   );
 };
@@ -446,7 +415,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                           {f.sentiment_label}
                         </span>
                       </td>
-                      <td style={{ minWidth: '400px' }}><FeedbackCell text={f.feedback_text} /></td>
+                      <td style={{ minWidth: '400px' }}>{renderFormattedFeedback(f.feedback_text)}</td>
                     </tr>
                   ))}
                 </tbody>
