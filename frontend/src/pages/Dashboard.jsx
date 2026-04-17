@@ -497,11 +497,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                     </div>
                   ) : null}
 
-                  {subjects.map(sub => {
+                  {subjects.map((sub, index) => {
                     const assignedStaff = staff.filter(s => s.subject_id === sub.id);
 
                     return (
-                      <div key={sub.id} className="inline-dir-row">
+                      <div key={sub.id} className="inline-dir-row" style={{ '--row-index': index }}>
                         {/* Left: Subject Info */}
                         <div className="dir-subject">
                           <div className="dir-icon">📚</div>
@@ -552,10 +552,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                   })}
 
                   {/* Staff without an assigned subject */}
-                  {staff.filter(s => !s.subject_id).map(s => {
+                  {staff.filter(s => !s.subject_id).map((s, index) => {
                     const isEditingStaff = editStaff.id === s.id;
+                    const baseIndex = subjects.length; // offset for following rows
                     return (
-                      <div key={s.id} className="list-item">
+                      <div key={s.id} className="list-item" style={{ '--row-index': baseIndex + index, animation: 'revealUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both', animationDelay: `calc(0.1s * ${baseIndex + index})` }}>
                         <div className="item-info" style={{ flexGrow: 1, paddingRight: '1rem' }}>
                           {isEditingStaff ? (
                             <input 

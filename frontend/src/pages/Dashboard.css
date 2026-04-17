@@ -2,6 +2,23 @@
    DASHBOARD — COMPLETE REDESIGN
 ═══════════════════════════════════ */
 
+/* ── Animations ── */
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 /* ── GlassCard base override ── */
 .glass-card {
   background: var(--glass-bg);
@@ -23,6 +40,7 @@
   margin: 0 auto;
   width: 100%;
   padding: 2.5rem 2rem 5rem;
+  animation: revealUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 /* ── Tabs ── */
@@ -36,6 +54,7 @@
   border: 1px solid var(--glass-border);
   width: fit-content;
   box-shadow: var(--glass-shadow);
+  animation: revealUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 
 .tab-btn {
@@ -79,8 +98,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: var(--transition);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: revealUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+
+.stat-card:nth-child(1) { animation-delay: 0.2s; }
+.stat-card:nth-child(2) { animation-delay: 0.3s; }
+.stat-card:nth-child(3) { animation-delay: 0.4s; }
+.stat-card:nth-child(4) { animation-delay: 0.5s; }
+.stat-card:nth-child(5) { animation-delay: 0.6s; }
 
 .stat-card::before {
   content: '';
@@ -94,8 +120,9 @@
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(124, 58, 237, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05);
+  border-color: var(--primary-light);
 }
 
 .stat-title {
@@ -154,6 +181,13 @@
 
 .chart-card {
   padding: 1.75rem;
+  animation: revealUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both;
+  transition: all 0.4s ease;
+}
+
+.chart-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* ── Action Bar ── */
@@ -206,6 +240,7 @@
 .feedback-table-card {
   padding: 1.75rem;
   overflow: hidden;
+  animation: revealUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.6s both;
 }
 
 .table-wrapper {
@@ -395,6 +430,12 @@
   border-radius: 12px;
   border-left: 3px solid var(--primary);
   margin-bottom: 1.5rem;
+  animation: revealUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+  transition: transform 0.3s ease;
+}
+
+.ai-summary-text:hover {
+  transform: translateX(5px) scale(1.01);
 }
 
 .ai-grid {
@@ -520,12 +561,17 @@
   border: 1px solid var(--glass-border);
   min-height: 52px;
   overflow: hidden;
-  transition: var(--transition);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: revealUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+.inline-dir-row:nth-child(n) { animation-delay: calc(0.1s * var(--row-index, 1)); }
+
 .inline-dir-row:hover {
-  border-color: rgba(124,58,237,0.25);
+  border-color: var(--primary-light);
   background: var(--bg-elevated);
+  transform: translateX(8px) scale(1.01);
+  box-shadow: -10px 10px 20px rgba(0, 0, 0, 0.05);
 }
 
 .dir-subject {
@@ -665,6 +711,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+  animation: revealUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
 }
 
 .fancy-form-card::before {
