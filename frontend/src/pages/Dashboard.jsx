@@ -496,16 +496,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                           <div className="dir-icon">📚</div>
                           <div className="dir-meta">
                             <div className="dir-title">{sub.name}</div>
-                            <div className="dir-subtitle">Year {sub.year} • {profile.department}</div>
-                          </div>
-                          
-                          <div className="dir-actions">
-                            <button className="icon-btn edit" title="Edit Subject" onClick={() => setEditingItem({ type: 'subject', id: sub.id, name: sub.name })}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
-                            </button>
-                            <button className="icon-btn delete" title="Delete Subject" onClick={() => handleDeleteSubject(sub.id)}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
+                            <div className="dir-subtitle" style={{ fontSize: '0.7rem' }}>Year {sub.year} • {profile.department}</div>
                           </div>
                         </div>
 
@@ -520,16 +511,8 @@ export default function Dashboard({ theme, toggleTheme }) {
                           {assignedStaff.length > 0 ? (
                             assignedStaff.map(as => (
                               <div key={as.id} className="dir-staff-pill">
-                                <div className="staff-avatar">{as.name.substring(0,2).toUpperCase()}</div>
-                                <span className="staff-name">{as.name}</span>
-                                <div className="dir-actions staff-actions">
-                                  <button className="icon-btn edit" title="Edit Staff" onClick={() => setEditingItem({ type: 'staff', id: as.id, name: as.name })}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
-                                  </button>
-                                  <button className="icon-btn delete" title="Remove Staff" onClick={() => handleDeleteStaff(as.id)}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                  </button>
-                                </div>
+                                <div className="staff-avatar" style={{ width: '20px', height: '20px', fontSize: '0.6rem' }}>{as.name.substring(0,2).toUpperCase()}</div>
+                                <span className="staff-name" style={{ fontSize: '0.8rem' }}>{as.name}</span>
                               </div>
                             ))
                           ) : (
@@ -537,6 +520,29 @@ export default function Dashboard({ theme, toggleTheme }) {
                               <span>Unassigned</span>
                             </div>
                           )}
+                        </div>
+                        
+                        {/* Far Right: Unified Actions */}
+                        <div className="dir-unified-actions">
+                          <button className="icon-btn edit" title="Edit Subject" onClick={() => setEditingItem({ type: 'subject', id: sub.id, name: sub.name })}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
+                          </button>
+                          <button className="icon-btn delete" title="Delete Subject" onClick={() => handleDeleteSubject(sub.id)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                          
+                          {assignedStaff.length > 0 && <div className="action-divider"></div>}
+                          
+                          {assignedStaff.map(as => (
+                            <React.Fragment key={'action-'+as.id}>
+                              <button className="icon-btn edit staff-edit" title={`Edit Staff: ${as.name}`} onClick={() => setEditingItem({ type: 'staff', id: as.id, name: as.name })}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg>
+                              </button>
+                              <button className="icon-btn delete staff-delete" title={`Remove Staff: ${as.name}`} onClick={() => handleDeleteStaff(as.id)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              </button>
+                            </React.Fragment>
+                          ))}
                         </div>
                       </div>
                     );

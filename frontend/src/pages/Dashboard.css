@@ -606,7 +606,7 @@
   transition: transform 0.2s, box-shadow 0.2s;
   overflow: hidden;
   position: relative;
-  min-height: 80px;
+  min-height: 54px;
 }
 
 .inline-dir-row:hover {
@@ -616,13 +616,13 @@
 
 /* Left side: Subject block */
 .dir-subject {
-  flex: 0 0 280px;
-  padding: 1.25rem;
+  flex: 0 0 240px;
+  padding: 0.75rem 1rem;
   background: linear-gradient(to right, rgba(139, 92, 246, 0.05), transparent);
   display: flex;
   position: relative;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .dir-icon {
@@ -657,16 +657,29 @@
   width: fit-content;
 }
 
-/* Hover Action buttons */
-.dir-actions {
+/* Hover Action buttons & Unified Container */
+.dir-unified-actions {
   display: flex;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 1.25rem;
   opacity: 0;
   transition: opacity 0.2s;
 }
 
-.dir-subject:hover .dir-actions { opacity: 1; }
-.dir-staff-pill:hover .staff-actions { opacity: 1; opacity: 1; transform: translateX(0); }
+.inline-dir-row:hover .dir-unified-actions { 
+  opacity: 1; 
+}
+
+.action-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(139, 92, 246, 0.2);
+  margin: 0 0.25rem;
+}
+
+.staff-edit { color: rgba(167, 139, 250, 0.8) !important; }
+.staff-delete { color: rgba(248, 113, 113, 0.8) !important; }
 
 .icon-btn {
   background: rgba(0, 0, 0, 0.03);
@@ -715,7 +728,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem 1.25rem 1rem 0;
+  padding: 0.75rem 1rem 0.75rem 0;
 }
 
 .dir-staff-empty {
@@ -754,6 +767,8 @@
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
+  justify-content: center;
+  font-size: 0.65rem;
   font-weight: bold;
 }
 
@@ -761,17 +776,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-main);
-  padding-right: 0.5rem;
-}
-
-.staff-actions {
-  position: absolute;
-  right: -0.5rem;
-  background: var(--glass-bg);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border-radius: 6px;
-  border: 1px solid var(--glass-border);
-  transform: translateX(-5px);
+  padding-right: 0.25rem;
 }
 
 /* Edit Modal */
