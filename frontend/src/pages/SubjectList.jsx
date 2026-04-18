@@ -72,7 +72,7 @@ export default function SubjectList({ theme, toggleTheme }) {
 
   return (
     <div className="page-wrapper dashboard-theme">
-      <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} onBack={() => navigate('/student')} />
+      <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} hideMenu={true} />
 
       <main className="sublist-premium-container">
         <div className="sublist-header-v2">

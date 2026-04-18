@@ -47,9 +47,12 @@
 
 @media (max-width: 640px) {
   .onboarding-visual {
-    height: 240px;
-    padding: 2.5rem 1.5rem;
+    height: 280px;
+    padding: 3rem 1.5rem 5rem;
   }
+  
+  .visual-title { font-size: 2.25rem; }
+  .visual-tagline { font-size: 1rem; }
 }
 
 .visual-content {
@@ -132,6 +135,37 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 0;
+}
+
+@media (max-width: 1024px) {
+  .onboarding-form-side {
+    margin-top: -50px;
+    border-radius: 32px 32px 0 0;
+    padding: 2rem 1.5rem;
+  }
+
+  .onboarding-nav {
+    position: absolute;
+    top: -240px; /* Positioned inside the banner area */
+    left: 1.5rem;
+    width: auto;
+    z-index: 100;
+  }
+  
+  .back-minimal-btn {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    padding: 0.6rem 1.2rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .onboarding-nav {
+    top: -220px;
+    left: 1rem;
+  }
 }
 
 .step-tracker {

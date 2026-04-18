@@ -7,7 +7,8 @@ export default function Header({
   showAuth = true, 
   userText = null, 
   onLogout = null, 
-  onBack = null
+  onBack = null,
+  hideMenu = false
 }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,12 +49,14 @@ export default function Header({
         </div>
       </div>
 
-      <button className="menu-toggle-btn" onClick={toggleMenu} aria-label="Toggle Menu">
-        {menuOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+      {!hideMenu && (
+        <button className="menu-toggle-btn" onClick={toggleMenu} aria-label="Toggle Menu">
+          {menuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
 
       {/* Mobile Overlay */}
-      {menuOpen && <div className="menu-overlay" onClick={toggleMenu} />}
+      {menuOpen && !hideMenu && <div className="menu-overlay" onClick={toggleMenu} />}
     </header>
   );
 }

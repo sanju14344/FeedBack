@@ -7,6 +7,7 @@ import {
   School, 
   ArrowRight,
   ArrowRightCircle,
+  ArrowLeft,
   GraduationCap,
   Sparkles,
   ChevronRight,
@@ -208,6 +209,10 @@ export default function StudentSelect({ theme, toggleTheme }) {
       {showConfirm && (
         <div className="modal-overlay">
           <GlassCard className="modal-content confirm-modal-premium">
+            <button className="modal-back-arrow" onClick={() => setShowConfirm(false)} aria-label="Go back">
+              <ArrowLeft size={18} />
+            </button>
+            
             <div className="confirm-icon-top">
               <ShieldAlert size={38} strokeWidth={1.5} />
             </div>
@@ -234,7 +239,6 @@ export default function StudentSelect({ theme, toggleTheme }) {
             </div>
 
             <div className="modal-actions-premium">
-              <button className="modal-btn-minimal" onClick={() => setShowConfirm(false)}>Go back</button>
               <Button variant="primary" className="btn-modal-confirm" onClick={confirmSelection}>
                 Confirm & Proceed
               </Button>
