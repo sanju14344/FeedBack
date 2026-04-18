@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './pages/Landing';
 import AuthFlow from './pages/AuthFlow';
 import Dashboard from './pages/Dashboard';
@@ -10,6 +11,78 @@ import SubjectList from './pages/SubjectList';
 import FeedbackForm from './pages/FeedbackForm';
 import './index.css';
 
+// Transition configuration for "Soft Fade & Zoom"
+const pageVariants = {
+  initial: { opacity: 0, scale: 0.98, filter: 'blur(4px)' },
+  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+  exit: { opacity: 0, scale: 1.02, filter: 'blur(4px)' }
+};
+
+const pageTransition = {
+  duration: 0.5,
+  ease: [0.22, 1, 0.36, 1] // Custom quintic ease
+};
+
+const AnimatedRoutes = ({ theme, toggleTheme }) => {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <Landing theme={theme} />
+          </motion.div>
+        } />
+        <Route path="/auth" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <AuthFlow theme={theme} />
+          </motion.div>
+        } />
+        <Route path="/cr-login" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <Login theme={theme} role="CR" />
+          </motion.div>
+        } />
+        <Route path="/admin-login" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <Login theme={theme} role="Admin" />
+          </motion.div>
+        } />
+        <Route path="/dashboard" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <Dashboard theme={theme} />
+          </motion.div>
+        } />
+        <Route path="/admin-master" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <AdminMasterDashboard theme={theme} />
+          </motion.div>
+        } />
+
+        {/* Student Feedback Flow */}
+        <Route path="/student" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <StudentSelect theme={theme} />
+          </motion.div>
+        } />
+        <Route path="/student/subjects" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <SubjectList theme={theme} />
+          </motion.div>
+        } />
+        <Route path="/student/feedback/:subjectId" element={
+          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
+            <FeedbackForm theme={theme} />
+          </motion.div>
+        } />
+
+        <Route path="*" element={<Landing theme={theme} />} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
 function App() {
   const getSystemTheme = () => 
     window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -18,32 +91,11 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => setTheme(e.matches ? 'dark' : 'light');
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing theme={theme} />} />
-        <Route path="/auth" element={<AuthFlow theme={theme} />} />
-        <Route path="/cr-login" element={<Login theme={theme} role="CR" />} />
-        <Route path="/admin-login" element={<Login theme={theme} role="Admin" />} />
-        <Route path="/dashboard" element={<Dashboard theme={theme} />} />
-        <Route path="/admin-master" element={<AdminMasterDashboard theme={theme} />} />
-
-        {/* Student Feedback Flow */}
-        <Route path="/student" element={<StudentSelect theme={theme} />} />
-        <Route path="/student/subjects" element={<SubjectList theme={theme} />} />
-        <Route path="/student/feedback/:subjectId" element={<FeedbackForm theme={theme} />} />
-
-        {/* Redirect unknown to landing */}
-        <Route path="*" element={<Landing theme={theme} />} />
-      </Routes>
+      <AnimatedRoutes theme={theme} />
     </BrowserRouter>
   );
 }

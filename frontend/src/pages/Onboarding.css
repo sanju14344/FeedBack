@@ -26,19 +26,22 @@
   .onboarding-page {
     flex-direction: column;
     overflow-y: auto;
+    min-height: 100vh; /* Standard fallback */
+    min-height: 100svh; /* Small Dynamic Viewport for mobile stability */
   }
 
   .onboarding-visual {
     flex: none;
-    height: 300px;
-    padding: 3rem 2rem;
-    justify-content: center;
+    height: 380px; /* Increased height for content safe zone */
+    padding: 3rem 2rem 5rem; /* Large bottom padding for the overlap zone */
+    justify-content: flex-start; /* Shift content up slightly */
     align-items: center;
     text-align: center;
   }
 
   .onboarding-visual .visual-content {
     max-width: 100%;
+    margin-top: 1rem;
   }
 
   .shape-1 { width: 300px; height: 300px; top: -150px; left: -50px; }
@@ -47,8 +50,8 @@
 
 @media (max-width: 640px) {
   .onboarding-visual {
-    height: 280px;
-    padding: 3rem 1.5rem 5rem;
+    height: 340px;
+    padding: 3.5rem 1.5rem 5rem;
   }
   
   .visual-title { font-size: 2.25rem; }
@@ -127,7 +130,7 @@
   padding: 2rem;
   background: var(--bg-color);
   position: relative;
-  z-index: 5;
+  z-index: 50; /* Higher than visual to ensure content below navigates */
 }
 
 .onboarding-nav {
@@ -135,21 +138,23 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 0;
+  pointer-events: auto; /* Explicitly ensure clickability */
 }
 
 @media (max-width: 1024px) {
   .onboarding-form-side {
-    margin-top: -50px;
+    margin-top: -60px; /* Slight overlap */
     border-radius: 32px 32px 0 0;
     padding: 2rem 1.5rem;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
   }
 
   .onboarding-nav {
     position: absolute;
-    top: -240px; /* Positioned inside the banner area */
+    top: -280px; /* Adjusted based on new banner height */
     left: 1.5rem;
     width: auto;
-    z-index: 100;
+    z-index: 200; /* Extremely high to beat any visual absolute positioning */
   }
   
   .back-minimal-btn {
@@ -158,12 +163,14 @@
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: white !important;
     padding: 0.6rem 1.2rem !important;
+    cursor: pointer;
+    pointer-events: auto;
   }
 }
 
 @media (max-width: 640px) {
   .onboarding-nav {
-    top: -220px;
+    top: -250px;
     left: 1rem;
   }
 }
