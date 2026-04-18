@@ -62,7 +62,7 @@
 .question-card {
   max-width: 600px;
   width: 100%;
-  padding: clamp(2rem, 8vw, 3.5rem) clamp(1rem, 5vw, 3rem);
+  padding: 3.5rem 3rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -372,7 +372,7 @@
 /* ── Success Screen ── */
 .feedback-success-card {
   max-width: 540px;
-  padding: clamp(2.5rem, 8vw, 4rem) clamp(1.5rem, 6vw, 3rem);
+  padding: 4rem 3rem;
 }
 
 .success-lottie-area {
@@ -410,9 +410,9 @@
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(6, 182, 212, 0.06));
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  padding: clamp(1rem, 4vw, 1.5rem);
+  padding: 1.5rem;
   text-align: left;
-  margin: 1.5rem 0;
+  margin: 1rem 0;
   animation: cardFadeIn 0.8s ease-out 0.5s both;
 }
 
@@ -429,7 +429,7 @@
 }
 
 .ai-summary-text {
-  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  font-size: 1rem;
   line-height: 1.65;
   color: var(--text-sub);
   font-style: italic;
@@ -451,4 +451,23 @@
   font-weight: 600;
 }
 
-
+@media (max-width: 600px) {
+  .wizard-main { padding: 1rem; }
+  .question-card { padding: 2rem 1.25rem; }
+  .q-label { font-size: 1.25rem; line-height: 1.4; }
+  .premium-star-btn svg { width: 32px; height: 32px; }
+  
+  .feedback-success-card {
+    padding: 3rem 1.5rem;
+    margin: 1rem;
+  }
+  
+  .ai-summary-box {
+    padding: 1.25rem;
+  }
+  
+  .ai-summary-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+}
