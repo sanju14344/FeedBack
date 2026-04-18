@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
+import Button from '../components/Button';
 import { getSubjects, getSubmittedSubjects, getStaff } from '../api';
+import { 
+  BookOpen, 
+  User, 
+  CheckCircle, 
+  Clock, 
+  Star, 
+  ChevronRight, 
+  ArrowLeft,
+  LayoutGrid
+} from 'lucide-react';
 import './SubjectList.css';
 
 export default function SubjectList({ theme, toggleTheme }) {
@@ -20,7 +31,6 @@ export default function SubjectList({ theme, toggleTheme }) {
   useEffect(() => {
     if (!deptId) { navigate('/student'); return; }
 
-    // Load subjects + already-submitted list in parallel
     Promise.all([
       getSubjects(deptId),
       getSubmittedSubjects(studentUid, deptId),
@@ -34,7 +44,6 @@ export default function SubjectList({ theme, toggleTheme }) {
         });
         
         setSubjects(enrichedSubjects);
-        // Merge backend data with any local session cache
         const fromSession = JSON.parse(sessionStorage.getItem('submitted_subjects') || '[]');
         const merged = Array.from(new Set([...(submittedRes.data || []), ...fromSession]));
         setSubmitted(merged);
@@ -42,89 +51,156 @@ export default function SubjectList({ theme, toggleTheme }) {
       })
       .catch(() => setError('Failed to load data. Please try again.'))
       .finally(() => setLoading(false));
-  }, [deptId]);
+  }, [deptId, studentUid, navigate]);
+
+  const { pendingSubjects, completedSubjects } = useMemo(() => {
+    return {
+      pendingSubjects: subjects.filter(s => !submitted.includes(s.id)),
+      completedSubjects: subjects.filter(s => submitted.includes(s.id))
+    };
+  }, [subjects, submitted]);
+
+  const completionRate = subjects.length > 0 
+    ? Math.round((submitted.length / subjects.length) * 100) 
+    : 0;
 
   const handleSelectSubject = (subject) => {
-    if (submitted.includes(subject.id)) return; // already done
+    if (submitted.includes(subject.id)) return;
     sessionStorage.setItem('current_subject', JSON.stringify(subject));
     navigate(`/student/feedback/${subject.id}`);
   };
 
-  const allDone = subjects.length > 0 && subjects.every(s => submitted.includes(s.id));
-
   return (
-    <div className="page-wrapper">
-      <div className="mesh-bg" />
-      <div className="blob blob-1" />
-      <div className="blob blob-2" />
-
+    <div className="page-wrapper dashboard-theme">
       <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} onBack={() => navigate('/student')} />
 
-      <main className="sublist-main">
-        <div className="sublist-header">
-          <div className="hero-badge">
-            <span className="badge-dot"></span>
-            {yearLabel} Year · {deptName}
+      <main className="sublist-premium-container">
+        <div className="sublist-header-v2">
+          <div className="header-top">
+            <button className="back-minimal-btn" onClick={() => navigate('/student')}>
+              <ArrowLeft size={18} /> Back
+            </button>
+            <div className="header-meta">
+              <span className="meta-badge">{yearLabel} Year</span>
+              <span className="meta-badge">{deptName}</span>
+            </div>
           </div>
-          <h1 className="sublist-title">
-            Choose a <span className="gradient-text">Subject</span>
-          </h1>
-          <p className="sublist-subtitle">
-            Select a subject below to submit your anonymous feedback. Completed subjects are marked with a ✅.
-          </p>
+
+          <div className="title-section">
+            <h1 className="sublist-title-v2">Choose a Subject</h1>
+            <p className="sublist-subtitle-v2">Select a subject to submit your anonymous feedback.</p>
+          </div>
+
+          <div className="progress-overview">
+            <div className="progress-info">
+              <span className="p-label">Participation Progress</span>
+              <span className="p-value">{submitted.length} of {subjects.length} Completed</span>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${completionRate}%` }}></div>
+            </div>
+          </div>
         </div>
 
-        {error && <div className="sublist-error">{error}</div>}
+        {error && <div className="sublist-error-v2">{error}</div>}
 
         {loading ? (
-          <div className="sublist-loading">
-            <div className="spinner" />
-            <span>Loading subjects…</span>
+          <div className="sublist-loading-v2">
+            <div className="spinner-glow" />
+            <span>Curating your dashboard…</span>
           </div>
         ) : subjects.length === 0 ? (
-          <GlassCard className="sublist-empty">
-            <span className="empty-icon">📭</span>
-            <p>No subjects have been added for this department yet.</p>
-            <p className="empty-hint">Your Class Representative needs to add subjects first.</p>
+          <GlassCard className="sublist-empty-v2">
+            <div className="empty-state-icon">
+              <LayoutGrid size={48} opacity={0.5} />
+            </div>
+            <h3>No subjects found</h3>
+            <p>Your academic department hasn't listed any subjects for this term yet.</p>
           </GlassCard>
         ) : (
-          <>
-            {allDone && (
-              <div className="all-done-banner">
-                🎉 You've completed feedback for all subjects! Thank you.
-              </div>
+          <div className="sections-container">
+            {pendingSubjects.length > 0 && (
+              <section className="subject-section">
+                <div className="section-header">
+                  <div className="section-indicator pending"></div>
+                  <h2 className="section-title">Pending Feedback</h2>
+                  <span className="section-count">{pendingSubjects.length}</span>
+                </div>
+                <div className="subject-grid-v2">
+                  {pendingSubjects.map((subject, idx) => (
+                    <SubjectCard 
+                      key={subject.id}
+                      subject={subject}
+                      isDone={false}
+                      index={idx}
+                      onSelect={() => handleSelectSubject(subject)}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
-            <div className="subject-grid">
-              {subjects.map((subject, idx) => {
-                const isDone = submitted.includes(subject.id);
-                return (
-                  <button
-                    key={subject.id}
-                    className={`subject-card ${isDone ? 'done' : 'pending'}`}
-                    onClick={() => handleSelectSubject(subject)}
-                    disabled={isDone}
-                  >
-                    <div className="subject-index">{String(idx + 1).padStart(2, '0')}</div>
-                    <div className="subject-info">
-                      <div className="subject-name">{subject.name}</div>
-                      {subject.staff_name && (
-                        <div className="subject-staff">👨‍🏫 {subject.staff_name}</div>
-                      )}
-                    </div>
-                    <div className="subject-status">
-                      {isDone ? (
-                        <span className="status-done">✅ Done</span>
-                      ) : (
-                        <span className="status-pending">Give Feedback →</span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
+
+            {completedSubjects.length > 0 && (
+              <section className="subject-section">
+                <div className="section-header">
+                  <div className="section-indicator completed"></div>
+                  <h2 className="section-title">Completed Subjects</h2>
+                  <span className="section-count">{completedSubjects.length}</span>
+                </div>
+                <div className="subject-grid-v2">
+                  {completedSubjects.map((subject, idx) => (
+                    <SubjectCard 
+                      key={subject.id}
+                      subject={subject}
+                      isDone={true}
+                      index={idx + pendingSubjects.length}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function SubjectCard({ subject, isDone, onSelect, index }) {
+  // Staggered animation delay
+  const animationDelay = `${(index % 6) * 0.08}s`;
+
+  return (
+    <div 
+      className={`subject-card-v2 ${isDone ? 'is-done' : 'is-pending'}`}
+      onClick={!isDone ? onSelect : undefined}
+      style={{ animationDelay }}
+    >
+      <div className="card-top">
+        <div className="subject-icon-box">
+          <BookOpen size={20} />
+        </div>
+        <div className={`status-pill ${isDone ? 'done' : 'pending'}`}>
+          {isDone ? <><CheckCircle size={12} /> Completed</> : <><Clock size={12} /> Pending</>}
+        </div>
+      </div>
+
+      <div className="card-body">
+        <h3 className="s-name">{subject.name}</h3>
+        <div className="s-tagline">
+          <User size={14} /> <span>{subject.staff_name || 'Department Faculty'}</span>
+        </div>
+      </div>
+
+      <div className="card-footer">
+        <div className="insight-preview">
+          <Star size={12} fill="#f59e0b" stroke="none" />
+          <span>High rating subject</span>
+        </div>
+        <button className={`action-btn ${isDone ? 'view' : 'start'}`}>
+          {isDone ? 'Done' : 'Review'} <ChevronRight size={16} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ShieldAlert, 
+  Calendar, 
+  School, 
+  ArrowRight,
+  ArrowRightCircle,
+  GraduationCap,
+  Sparkles,
+  ChevronRight,
+  Check
+} from 'lucide-react';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
 import { getDepartmentsByYear } from '../api';
 import { supabase } from '../supabaseClient';
+import './Onboarding.css';
 import './StudentSelect.css';
 
 const YEARS = ['1', '2', '3', '4'];
@@ -31,7 +44,6 @@ export default function StudentSelect({ theme, toggleTheme }) {
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // Not signed in, redirect back to auth flow
         navigate('/auth', { replace: true });
       } else {
         sessionStorage.setItem('student_uid', session.user.id);
@@ -65,102 +77,165 @@ export default function StudentSelect({ theme, toggleTheme }) {
     navigate('/student/subjects');
   };
 
-  if (isCheckingAuth) {
-    return null; // or a loading spinner
-  }
+  if (isCheckingAuth) return null;
 
   return (
-    <div className="page-wrapper">
-      <div className="mesh-bg" />
-      <div className="blob blob-1" />
-      <div className="blob blob-2" />
-
-      <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} onBack={() => navigate('/auth')} />
-
-      <main className="landing-main">
-        <GlassCard className="select-card">
-          <div className="select-header">
-            <div className="hero-badge">
-              <span className="badge-dot"></span>
-              Student Feedback Portal
-            </div>
-            <h1 className="select-title">Select Your <span className="gradient-text">Year & Department</span></h1>
-            <p className="select-subtitle">Choose your academic year and department to see the relevant feedback forms.</p>
+    <div className="onboarding-page">
+      {/* Visual Section */}
+      <section className="onboarding-visual select-visual">
+         <div className="floating-shapes">
+          <div className="shape shape-1" style={{ opacity: 0.4 }}></div>
+          <div className="shape shape-2" style={{ opacity: 0.4 }}></div>
+        </div>
+        
+        <motion.div 
+          className="visual-content"
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="visual-badge">
+            <Sparkles size={14} /> Step 2: Personalisation
           </div>
+          <h1 className="visual-title">
+            Tailor Your <br />
+            <span className="gradient-text-light">Experience</span>
+          </h1>
+          <p className="visual-tagline">
+            Select your academic profile to access specific feedback forms and performance insights for your department.
+          </p>
+        </motion.div>
+      </section>
 
-          {error && <div className="select-error">{error}</div>}
+      {/* Form Section */}
+      <section className="onboarding-form-side">
+        <div className="onboarding-nav">
+          <button className="back-minimal-btn" onClick={() => navigate('/auth')}>
+             Back
+          </button>
+        </div>
 
-          <div className="select-body">
-            {/* Year Selector */}
-            <div className="select-group">
-              <label className="select-label">Academic Year</label>
-              <div className="year-grid">
-                {YEARS.map(yr => (
-                  <button
-                    key={yr}
-                    className={`year-btn ${selectedYear === yr ? 'active' : ''}`}
-                    onClick={() => setSelectedYear(yr)}
-                  >
-                    <span className="year-num">{yr}</span>
-                    <span className="year-text">{YEAR_LABELS[yr]}</span>
-                  </button>
-                ))}
-              </div>
+        <div className="form-content-wrapper">
+          <GlassCard className="form-card selection-card">
+            <div className="auth-header" style={{ textAlign: 'left' }}>
+              <h2 className="auth-step-title">Select Your Profile</h2>
+              <p className="auth-step-subtitle">Help us find the right subjects for you.</p>
             </div>
 
-            {/* Department Selector */}
-            <div className="select-group">
-              <label className="select-label">Department</label>
-              {!selectedYear ? (
-                <p className="select-hint">Select a year first to see departments.</p>
-              ) : loading ? (
-                <div className="select-loading">
-                  <div className="spinner" />
-                  <span>Loading departments…</span>
-                </div>
-              ) : departments.length === 0 ? (
-                <p className="select-hint">No departments found for this year.</p>
-              ) : (
-                <div className="dept-grid">
-                  {departments.map(dept => (
-                    <button
-                      key={dept.id}
-                      className={`dept-btn ${selectedDept === dept.id ? 'active' : ''}`}
-                      onClick={() => setSelectedDept(dept.id)}
+            {error && <div className="auth-error-msg">{error}</div>}
+
+            <div className="selection-body">
+              {/* Year Cards */}
+              <div className="selection-group">
+                <label className="selection-label">Academic Year</label>
+                <div className="year-card-grid">
+                  {YEARS.map((yr, idx) => (
+                    <motion.button
+                      key={yr}
+                      className={`year-card-premium ${selectedYear === yr ? 'active' : ''}`}
+                      onClick={() => setSelectedYear(yr)}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 + (idx * 0.05) }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      {dept.name}
-                    </button>
+                      <div className="y-icon"><GraduationCap size={20} /></div>
+                      <div className="y-info">
+                        <span className="y-num">{yr}</span>
+                        <span className="y-label">{YEAR_LABELS[yr]}</span>
+                      </div>
+                      {selectedYear === yr && <div className="y-check"><Check size={14} /></div>}
+                    </motion.button>
                   ))}
                 </div>
-              )}
+              </div>
+
+              {/* Department Reveal */}
+              <AnimatePresence>
+                {selectedYear && (
+                  <motion.div 
+                    className="selection-group dept-reveal"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <label className="selection-label">Department</label>
+                    {loading ? (
+                      <div className="selection-loading-box">
+                        <div className="loading-spinner-small" />
+                        <span>Finding departments...</span>
+                      </div>
+                    ) : departments.length === 0 ? (
+                      <p className="selection-hint">No departments available.</p>
+                    ) : (
+                      <div className="dept-chip-cloud">
+                        {departments.map((dept, idx) => (
+                          <motion.button
+                            key={dept.id}
+                            className={`dept-chip-premium ${selectedDept === dept.id ? 'active' : ''}`}
+                            onClick={() => setSelectedDept(dept.id)}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: idx * 0.03 }}
+                          >
+                            {dept.name}
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <Button
-              variant="primary"
-              className="proceed-btn"
-              onClick={handleProceedClick}
-              disabled={!selectedYear || !selectedDept}
-            >
-              View Feedback Forms →
-            </Button>
-          </div>
-        </GlassCard>
-      </main>
+            <div className="selection-footer">
+              <Button
+                variant="primary"
+                className="proceed-btn-premium"
+                onClick={handleProceedClick}
+                disabled={!selectedYear || !selectedDept}
+              >
+                <span>Continue to subjects</span> <ChevronRight size={18} />
+              </Button>
+            </div>
+          </GlassCard>
+        </div>
+      </section>
 
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="modal-overlay">
-          <GlassCard className="modal-content">
+          <GlassCard className="modal-content confirm-modal-premium">
+            <div className="confirm-icon-top">
+              <ShieldAlert size={38} strokeWidth={1.5} />
+            </div>
+            
             <h2 className="modal-title">Confirm Selection</h2>
-            <p className="modal-text">
-              You are proceeding as a <strong>{YEAR_LABELS[selectedYear]}</strong> student from the <strong>{departments.find(d => d.id === selectedDept)?.name}</strong> department.
-            </p>
-            <p className="modal-text warning">This cannot be changed later without starting over.</p>
-            <div className="modal-actions">
-              <Button variant="outline" onClick={() => setShowConfirm(false)}>
-                Wait, Go Back
-              </Button>
-              <Button variant="primary" onClick={confirmSelection}>
+            <p className="modal-subtitle">Ensure your details are correct before proceeding.</p>
+            
+            <div className="confirm-preview-box">
+              <div className="preview-row">
+                <div className="preview-icon-wrapper"><Calendar size={20} /></div>
+                <div className="preview-info">
+                  <span className="p-val-label">Academic Year</span>
+                  <span className="p-val-text">{YEAR_LABELS[selectedYear]}</span>
+                </div>
+              </div>
+              <div className="preview-divider"></div>
+              <div className="preview-row">
+                <div className="preview-icon-wrapper"><School size={20} /></div>
+                <div className="preview-info">
+                   <span className="p-val-label">Department</span>
+                   <span className="p-val-text">{departments.find(d => d.id === selectedDept)?.name}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-actions-premium">
+              <button className="modal-btn-minimal" onClick={() => setShowConfirm(false)}>Go back</button>
+              <Button variant="primary" className="btn-modal-confirm" onClick={confirmSelection}>
                 Confirm & Proceed
               </Button>
             </div>
@@ -170,3 +245,4 @@ export default function StudentSelect({ theme, toggleTheme }) {
     </div>
   );
 }
+

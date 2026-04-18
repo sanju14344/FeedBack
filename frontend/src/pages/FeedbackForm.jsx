@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
@@ -10,44 +10,51 @@ import {
   Meh, 
   Frown, 
   Lock, 
-  Star 
+  Star,
+  ArrowRight,
+  ArrowLeft,
+  MessageSquare,
+  Sparkles,
+  ChevronRight,
+  Send,
+  ShieldCheck
 } from 'lucide-react';
 import './FeedbackForm.css';
 
 const QUESTIONS = [
-  { key: 'q1', label: 'Teacher explains concepts clearly' },
-  { key: 'q2', label: 'Finishes the syllabus on time' },
-  { key: 'q3', label: 'Teaching methods help you understand' },
-  { key: 'q4', label: 'Encourages questions and discussion' },
-  { key: 'q5', label: 'Tests and marks are fair' },
-  { key: 'q6', label: 'Overall satisfaction with this subject' },
+  { key: 'q1', label: 'Does the teacher explain concepts clearly and effectively?' },
+  { key: 'q2', label: 'Does the teacher complete the syllabus within the timeline?' },
+  { key: 'q3', label: 'Do the teaching methods help you grasp complex topics?' },
+  { key: 'q4', label: 'Are questions and active discussions encouraged in class?' },
+  { key: 'q5', label: 'Are the tests and internal markings fair and transparent?' },
+  { key: 'q6', label: 'What is your overall satisfaction level with this subject?' },
 ];
 
-function StarRating({ value, onChange }) {
+function StarRating({ value, onChange, isReadOnly = false }) {
   const [hovered, setHovered] = useState(0);
   return (
-    <div className="star-row">
+    <div className="premium-star-row">
       {[1, 2, 3, 4, 5].map(star => {
         const isFilled = star <= (hovered || value);
+        const isCurrent = star === (hovered || value);
         return (
           <button
             key={star}
             type="button"
-            className={`star-btn ${isFilled ? 'filled' : ''}`}
-            onMouseEnter={() => setHovered(star)}
-            onMouseLeave={() => setHovered(0)}
-            onClick={() => onChange(star)}
-            style={{ padding: '0.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            className={`premium-star-btn ${isFilled ? 'filled' : ''} ${isCurrent ? 'current' : ''}`}
+            onMouseEnter={() => !isReadOnly && setHovered(star)}
+            onMouseLeave={() => !isReadOnly && setHovered(0)}
+            onClick={() => !isReadOnly && onChange(star)}
+            disabled={isReadOnly}
           >
             <Star 
-              size={24} 
+              size={36} 
               fill={isFilled ? "currentColor" : "none"} 
-              strokeWidth={isFilled ? 0 : 2} 
+              strokeWidth={isFilled ? 0 : 1.5} 
             />
           </button>
         );
       })}
-      <span className="star-label">{value ? `${value}/5` : 'Not rated'}</span>
     </div>
   );
 }
@@ -61,25 +68,41 @@ export default function FeedbackForm({ theme, toggleTheme }) {
     catch { return null; }
   })();
   const studentUid = sessionStorage.getItem('student_uid');
-  const deptId = sessionStorage.getItem('student_dept');
 
+  // State
+  const [currentStep, setCurrentStep] = useState(0);
   const [ratings, setRatings] = useState({ q1:0, q2:0, q3:0, q4:0, q5:0, q6:0 });
   const [questionComments, setQuestionComments] = useState({ q1:'', q2:'', q3:'', q4:'', q5:'', q6:'' });
-  const [comment, setComment] = useState('');
+  const [showCommentInput, setShowCommentInput] = useState({});
+  const [finalComment, setFinalComment] = useState('');
+  
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [aiSummary, setAiSummary] = useState('');
   const [sentiment, setSentiment] = useState('');
+
+  const totalSteps = QUESTIONS.length + 1; // questions + final review
 
   useEffect(() => {
     if (!subject || !studentUid) navigate('/student');
-  }, []);
+  }, [subject, studentUid, navigate]);
+
+  const handleRating = (key, val) => {
+    setRatings(prev => ({ ...prev, [key]: val }));
+  };
+
+  const toggleComment = (key) => {
+    setShowCommentInput(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const allRated = Object.values(ratings).every(v => v > 0);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!allRated) { setError('Please rate all 6 questions before submitting.'); return; }
+  const handleSubmit = async () => {
+    if (!allRated) {
+      setError('Please provide a rating for all aspects.');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
@@ -87,59 +110,61 @@ export default function FeedbackForm({ theme, toggleTheme }) {
         student_uid: studentUid,
         subject_id: subjectId,
         staff_id: subject?.staff_id || null,
-        feedback_text: comment,
+        feedback_text: finalComment,
         question_comments: questionComments,
         ...ratings,
       };
+      
       const res = await submitFeedback(payload);
+      setAiSummary(res.data?.reason || "Thank you for your valuable input. Our system has processed your feedback to help improve the learning experience.");
       setSentiment(res.data?.sentiment || 'Neutral');
 
-      // Mark this subject as submitted in session storage
       const prev = JSON.parse(sessionStorage.getItem('submitted_subjects') || '[]');
       sessionStorage.setItem('submitted_subjects', JSON.stringify([...prev, subjectId]));
+      
       setSubmitted(true);
+      
+      // Auto-redirect after 6 seconds
+      setTimeout(() => navigate('/student/subjects'), 10000);
     } catch (err) {
-      const msg = err?.response?.data?.error || 'Submission failed. Please try again.';
-      setError(msg);
+      setError(err?.response?.data?.error || 'Failed to submit feedback. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const sentimentColors = { Positive: '#22c55e', Neutral: '#f59e0b', Negative: '#ef4444' };
-  const sentimentIcons = { 
-    Positive: <Smile size={20} style={{marginRight: '6px'}} />, 
-    Neutral: <Meh size={20} style={{marginRight: '6px'}} />, 
-    Negative: <Frown size={20} style={{marginRight: '6px'}} /> 
-  };
+  const currentQ = QUESTIONS[currentStep];
+  const progress = (currentStep / (totalSteps - 1)) * 100;
 
   if (submitted) {
     return (
-      <div className="page-wrapper">
-        <div className="mesh-bg" />
-        <div className="blob blob-1" />
-        <div className="blob blob-2" />
+      <div className="page-wrapper feedback-wizard-wrapper">
         <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} />
-        <main className="landing-main">
-          <GlassCard className="success-card">
-            <div className="success-icon"><CheckCircle2 size={64} style={{color: 'var(--success)'}} /></div>
-            <h2 className="success-title">Feedback Submitted!</h2>
-            <p className="success-subtitle">
-              Your anonymous feedback for <strong>{subject?.name}</strong> has been recorded.
-            </p>
-            {sentiment && (
-              <div className="sentiment-pill" style={{ display: 'inline-flex', alignItems: 'center', background: sentimentColors[sentiment] + '22', color: sentimentColors[sentiment], border: `1px solid ${sentimentColors[sentiment]}44` }}>
-                {sentimentIcons[sentiment]} Detected as <strong>{sentiment}</strong>
+        <main className="wizard-main">
+          <GlassCard className="feedback-success-card">
+            <div className="success-lottie-area">
+              <div className="success-ring">
+                <CheckCircle2 size={80} className="success-check-icon" />
               </div>
-            )}
-            <div className="success-actions">
-              <Button variant="primary" onClick={() => navigate('/student/subjects')}>
-                ← Back to Subjects
-              </Button>
-              <Button variant="glass" onClick={() => navigate('/student')}>
-                Change Department
-              </Button>
             </div>
+            <h2 className="wizard-title">Feedback Received</h2>
+            <p className="wizard-subtitle">Your anonymous contribution helps us maintain high educational standards.</p>
+            
+            <div className="ai-summary-box">
+              <div className="ai-box-header">
+                <Sparkles size={18} />
+                <span>AI Insights Summary</span>
+              </div>
+              <p className="ai-summary-text">{aiSummary}</p>
+            </div>
+
+            <div className="redirect-countdown">
+              Returning to subjects in 10 seconds...
+            </div>
+            
+            <Button variant="primary" className="back-btn-success" onClick={() => navigate('/student/subjects')}>
+              Back to Subject List <ArrowRight size={18} style={{marginLeft: '8px'}} />
+            </Button>
           </GlassCard>
         </main>
       </div>
@@ -147,84 +172,122 @@ export default function FeedbackForm({ theme, toggleTheme }) {
   }
 
   return (
-    <div className="page-wrapper">
-      <div className="mesh-bg" />
-      <div className="blob blob-1" />
-      <div className="blob blob-2" />
-
+    <div className="page-wrapper feedback-wizard-wrapper">
       <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} onBack={() => navigate('/student/subjects')} />
 
-      <main className="form-main">
-        <GlassCard className="feedback-card">
-          <div className="form-header">
-            <div className="hero-badge">
-              <span className="badge-dot"></span>
-              Anonymous Feedback
-            </div>
-            <h1 className="form-title">
-              {subject?.name} 
-              {subject?.staff_name && <span style={{fontSize:'0.6em', opacity: 0.7, fontWeight: 'normal'}}> — {subject.staff_name}</span>}
-            </h1>
-            <p className="form-subtitle">
-              Your identity is completely anonymous. Rate each aspect honestly.
-            </p>
-          </div>
+      <div className="progress-container">
+        <div className="progress-bar-bg">
+          <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+        </div>
+        <div className="progress-text">
+          Step {Math.min(currentStep + 1, totalSteps)} of {totalSteps}
+        </div>
+      </div>
 
-          <form className="feedback-form" onSubmit={handleSubmit}>
-            {/* Star Ratings */}
-            <div className="ratings-section">
-              <h3 className="section-heading">Rate Each Aspect</h3>
-              {QUESTIONS.map(q => (
-                <div key={q.key} className="rating-row-container">
-                  <div className="rating-row">
-                    <span className="rating-label">{q.label}</span>
-                    <StarRating
-                      value={ratings[q.key]}
-                      onChange={val => setRatings(prev => ({ ...prev, [q.key]: val }))}
-                    />
-                  </div>
-                  <div className="rating-comment">
-                    <input
-                      type="text"
-                      className="question-comment-input"
-                      placeholder="Add a comment for this question (optional)..."
-                      value={questionComments[q.key]}
-                      onChange={e => setQuestionComments(prev => ({ ...prev, [q.key]: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              ))}
+      <main className="wizard-main">
+        {currentStep < QUESTIONS.length ? (
+          <GlassCard className="question-card" key={currentQ.key}>
+            <div className="q-header-badges">
+              <div className="q-badge">Question {currentStep + 1}</div>
+              <div className="q-subject-badge">{subject?.name}</div>
             </div>
-
-            {/* Text Comment */}
-            <div className="comment-section">
-              <h3 className="section-heading">Additional Comments <span className="optional">(Optional)</span></h3>
-              <textarea
-                className="comment-box"
-                placeholder="Share any specific feedback, suggestions, or concerns about this subject…"
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                rows={4}
+            <h2 className="q-label">{currentQ.label}</h2>
+            
+            <div className="rating-container">
+              <StarRating 
+                value={ratings[currentQ.key]} 
+                onChange={(val) => handleRating(currentQ.key, val)} 
               />
+              <div className="rating-desc">
+                {ratings[currentQ.key] === 5 ? 'Excellent' : 
+                 ratings[currentQ.key] === 4 ? 'Very Good' :
+                 ratings[currentQ.key] === 3 ? 'Good' :
+                 ratings[currentQ.key] === 2 ? 'Fair' :
+                 ratings[currentQ.key] === 1 ? 'Poor' : 'Select a rating'}
+              </div>
             </div>
 
-            {error && <div className="form-error">{error}</div>}
+            <div className="comment-toggle-area">
+              {!showCommentInput[currentQ.key] ? (
+                <button className="add-comment-trigger" onClick={() => toggleComment(currentQ.key)}>
+                  <MessageSquare size={16} /> Add specific notes for this question
+                </button>
+              ) : (
+                <div className="q-comment-input-wrapper">
+                  <textarea 
+                    autoFocus
+                    placeholder="Type your notes here..."
+                    className="q-comment-textarea"
+                    value={questionComments[currentQ.key]}
+                    onChange={(e) => setQuestionComments(prev => ({ ...prev, [currentQ.key]: e.target.value }))}
+                  />
+                  <button className="close-comment" onClick={() => toggleComment(currentQ.key)}>Minimize</button>
+                </div>
+              )}
+            </div>
 
-            <div className="form-footer">
-              <div className="anon-note">
-                <Lock size={14} style={{marginRight: '6px', verticalAlign: 'middle'}} /> Your submission is completely anonymous and cannot be traced back to you.
-              </div>
-              <Button
-                variant="primary"
-                type="submit"
-                className={`submit-btn ${submitting ? 'loading' : ''}`}
-                disabled={submitting}
+            <div className="wizard-controls">
+              <button 
+                className="wiz-nav-btn prev" 
+                disabled={currentStep === 0} 
+                onClick={() => setCurrentStep(prev => prev - 1)}
               >
-                {submitting ? 'Submitting…' : 'Submit Feedback →'}
+                <ArrowLeft size={18} /> Previous
+              </button>
+              <button 
+                className="wiz-nav-btn next" 
+                disabled={ratings[currentQ.key] === 0}
+                onClick={() => setCurrentStep(prev => prev + 1)}
+              >
+                Next <ArrowRight size={18} />
+              </button>
+            </div>
+          </GlassCard>
+        ) : (
+          <GlassCard className="question-card final-review-card">
+            <div className="q-badge final-badge">
+              <Sparkles size={14} style={{marginRight: '6px'}} /> Final Review
+            </div>
+            <h2 className="q-label">Any additional thoughts, <span className="subject-name-highlight">{subject?.name}</span>?</h2>
+            <p className="wizard-subtitle-small">Your contribution directly helps improve learning quality.</p>
+            
+            <div className="final-input-wrapper">
+              <textarea 
+                className="final-comment-textarea"
+                placeholder="Share any overall suggestions or praise for this subject..."
+                value={finalComment}
+                onChange={(e) => setFinalComment(e.target.value)}
+              />
+              <div className="textarea-accent"></div>
+            </div>
+
+            <div className="security-badge-wrapper">
+              <div className="anon-disclaimer-premium">
+                <ShieldCheck size={16} className="security-icon" />
+                <span>100% Encrypted & Anonymous Submission</span>
+              </div>
+            </div>
+
+            {error && <div className="wiz-error">{error}</div>}
+
+            <div className="wizard-controls">
+              <button 
+                className="wiz-nav-btn prev" 
+                onClick={() => setCurrentStep(prev => prev - 1)}
+              >
+                <ArrowLeft size={18} /> Question 6
+              </button>
+              <Button 
+                variant="primary" 
+                className={`wiz-submit-btn ${submitting ? 'loading' : ''}`}
+                onClick={handleSubmit}
+                disabled={submitting || !allRated}
+              >
+                {submitting ? 'Encrypting & Sending...' : <><Send size={18} style={{marginRight: '8px'}} /> Complete Submission</>}
               </Button>
             </div>
-          </form>
-        </GlassCard>
+          </GlassCard>
+        )}
       </main>
     </div>
   );

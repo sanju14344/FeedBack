@@ -1,28 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
-import Button from '../components/Button';
-import { Lock, BarChart2, Zap } from 'lucide-react';
+import { Lock, BarChart2, Zap, ShieldCheck } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import './Onboarding.css';
 import './AuthFlow.css';
 
 export default function AuthFlow({ theme, toggleTheme }) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Guard: supabase may be null if env vars are missing in production
     if (!supabase) return;
 
-    // Listen for auth state changes (like when returning from Google OAuth)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only navigate on explicit SIGNED_IN event, not on INITIAL_SESSION so users aren't auto-trapped
       if (event === 'SIGNED_IN' && session) {
         sessionStorage.setItem('student_uid', session.user.id);
         navigate('/student');
@@ -36,9 +30,10 @@ export default function AuthFlow({ theme, toggleTheme }) {
 
   const handleGoogleLogin = async () => {
     if (!supabase) {
-      setError('Authentication service is not configured. Please contact support.');
+      setError('Authentication service is not configured.');
       return;
     }
+    setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -46,74 +41,94 @@ export default function AuthFlow({ theme, toggleTheme }) {
       }
     });
     if (error) {
-      console.error('Error logging in with Google:', error.message);
-      setError('Failed to initialize Google login. Check Supabase URL settings.');
-    }
-  };
-
-  const handleEmailAuth = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setMessage('');
-
-    try {
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        sessionStorage.setItem('student_uid', data.user.id);
-        navigate('/student');
-      } else {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        // If email confirmation is required by Supabase settings, inform the user
-        if (data?.user?.identities?.length === 0) {
-          setError('Email already exists or sign up failed.');
-        } else {
-          setMessage('Success! You can now sign in.');
-          setIsLogin(true);
-        }
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
+      setError('Failed to initialize Google login.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="page-wrapper">
-      <div className="mesh-bg" />
-      <div className="blob blob-1" />
-      <div className="blob blob-2" />
-      
-      <Header showAuth={true} onBack={() => navigate('/')} />
-      
-      <main className="landing-main">
-        <GlassCard className="auth-card">
-          <div className="hero-badge">
-            <span className="badge-dot"></span> Anonymous & Secure Feedback
+    <div className="onboarding-page">
+      {/* Visual Section */}
+      <section className="onboarding-visual">
+        <div className="floating-shapes">
+          <div className="shape shape-1"></div>
+          <div className="shape shape-2"></div>
+          <div className="shape shape-3"></div>
+        </div>
+        
+        <motion.div 
+          className="visual-content"
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <div className="visual-badge">
+            <ShieldCheck size={14} /> Enhanced Security
           </div>
-          
-          <h1 className="hero-title auth-title">
-            Empower <span className="gradient-text">Honest</span> Feedback
+          <h1 className="visual-title">
+            Empower <br />
+            <span className="gradient-text-light">Honest</span> Feedback
           </h1>
+          <p className="visual-tagline">
+            Your anonymous voice is the catalyst for educational excellence. 
+            Join 2,000+ students shaping the future of learning.
+          </p>
+        </motion.div>
+      </section>
 
-          <div className="auth-actions" style={{ flexDirection: 'column', gap: '1rem', alignItems: 'center', marginTop: '2rem' }}>
-            <button type="button" className="google-btn" onClick={handleGoogleLogin} style={{ width: '100%' }}>
-              <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" className="google-icon" />
-              Continue with Google
-            </button>
-          </div>
+      {/* Form Section */}
+      <section className="onboarding-form-side">
+        <div className="onboarding-nav">
+          <button className="back-minimal-btn" onClick={() => navigate('/')}>
+             Back
+          </button>
+        </div>
 
-          <div className="trust-badges" style={{ marginTop: '2rem' }}>
-            <div className="trust-item"><Lock size={14} color="#f59e0b" /><span>Anonymised by default</span></div>
-            <div className="trust-item"><BarChart2 size={14} color="#8b5cf6" /><span>Sentiment Insights</span></div>
-            <div className="trust-item"><Zap size={14} color="#ef4444" /><span>Real-time reports</span></div>
-          </div>
+        <div className="form-content-wrapper">
+          <motion.div 
+            className="form-card-container"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <GlassCard className="form-card">
+              <div className="auth-header">
+                <h2 className="auth-step-title">Welcome back</h2>
+                <p className="auth-step-subtitle">Securely sign in to your student account.</p>
+              </div>
 
-        </GlassCard>
-      </main>
+              <div className="auth-actions-v2">
+                <button 
+                  className={`google-login-btn-premium ${loading ? 'auth-loading' : ''}`}
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="loading-spinner-small" />
+                  ) : (
+                    <>
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" />
+                      <span>Continue with Google</span>
+                    </>
+                  )}
+                </button>
+                {error && <p className="auth-error-msg">{error}</p>}
+              </div>
+
+              <div className="auth-footer-trust">
+                <div className="trust-pill"><Lock size={12} /> Anonymous</div>
+                <div className="trust-pill"><BarChart2 size={12} /> Insights</div>
+                <div className="trust-pill"><Zap size={12} /> Real-time</div>
+              </div>
+            </GlassCard>
+            
+            <p className="onboarding-help-text">
+              By continuing, you agree to our Terms of Service and Privacy Policy.
+            </p>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 }
+

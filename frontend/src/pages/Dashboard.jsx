@@ -251,6 +251,9 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   return (
     <div className="page-wrapper dashboard-wrapper">
+      <div className="dashboard-orb dashboard-orb-1" />
+      <div className="dashboard-orb dashboard-orb-2" />
+      <div className="dashboard-orb dashboard-orb-3" />
       <Header 
         theme={theme} 
         toggleTheme={toggleTheme} 

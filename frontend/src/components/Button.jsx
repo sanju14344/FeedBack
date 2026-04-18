@@ -6,7 +6,7 @@ export default function Button({ children, variant = 'primary', icon, onClick, c
   return (
     <button type={type} className={`custom-btn btn-${variant} ${className}`} onClick={onClick}>
       {icon && <span className="btn-icon">{icon}</span>}
-      <span className="btn-text">{children}</span>
+      <span className="btn-label">{children}</span>
     </button>
   );
 }
