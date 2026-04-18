@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  BarChart3, 
+  MessageSquare, 
+  Settings, 
+  Sparkles, 
+  CheckCircle2, 
+  AlertCircle, 
+  Lightbulb, 
+  Bookmark,
+  BookOpen,
+  User,
+  FolderOpen,
+  Search,
+  Check,
+  X,
+  Minus,
+  Home,
+  Book
+} from 'lucide-react';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
@@ -42,7 +61,7 @@ const renderFormattedFeedback = (text) => {
                 <span className="fb-metric">{metric}</span>
                 <span className={`fb-score fb-score-${Math.round(score)}`}>{score}/5</span>
               </div>
-              {comment && <div className="fb-comment">💬 "{comment}"</div>}
+              {comment && <div className="fb-comment"><MessageSquare size={12} style={{marginRight: '6px', verticalAlign: 'middle'}} /> "{comment}"</div>}
             </div>
           );
         }
@@ -243,13 +262,13 @@ export default function Dashboard({ theme, toggleTheme }) {
         {/* Navigation Tabs */}
         <div className="dash-tabs">
           <button className={`tab-btn ${activeTab === 'Analytics' ? 'active' : ''}`} onClick={() => setActiveTab('Analytics')}>
-            <span role="img" aria-label="analytics">📊</span> Analytics
+            <BarChart3 size={18} /> Analytics
           </button>
           <button className={`tab-btn ${activeTab === 'Feedback' ? 'active' : ''}`} onClick={() => setActiveTab('Feedback')}>
-            <span role="img" aria-label="feedback">💬</span> Feedback
+            <MessageSquare size={18} /> Feedback
           </button>
           <button className={`tab-btn ${activeTab === 'Manage' ? 'active' : ''}`} onClick={() => setActiveTab('Manage')}>
-            <span role="img" aria-label="manage">⚙️</span> Manage
+            <Settings size={18} /> Manage
           </button>
         </div>
 
@@ -292,31 +311,31 @@ export default function Dashboard({ theme, toggleTheme }) {
 
             {/* AI Insights Board */}
             <GlassCard className="chart-card" style={{ marginBottom: '2rem' }}>
-              <h3 className="section-title">✨ AI Powered Insights</h3>
+              <h3 className="section-title"><Sparkles size={20} style={{marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)'}} /> AI Powered Insights</h3>
               {insights?.ai_summary ? (
                 <>
                   <p className="ai-summary-text">{insights.ai_summary}</p>
                   <div className="ai-grid">
                     <div className="ai-box">
-                      <h4>✅ Key Strengths</h4>
+                      <h4><CheckCircle2 size={16} /> Key Strengths</h4>
                       <ul className="ai-list">
                         {insights.ai_strengths?.map((s, i) => <li key={i}>{s}</li>)}
                       </ul>
                     </div>
                     <div className="ai-box">
-                      <h4>⚠️ Improvement Areas</h4>
+                      <h4><AlertCircle size={16} /> Improvement Areas</h4>
                       <ul className="ai-list">
                         {insights.ai_improvements?.map((s, i) => <li key={i}>{s}</li>)}
                       </ul>
                     </div>
                     <div className="ai-box">
-                      <h4>💡 Actionable Suggestions</h4>
+                      <h4><Lightbulb size={16} /> Actionable Suggestions</h4>
                       <ul className="ai-list">
                         {insights.ai_suggestions?.map((s, i) => <li key={i}>{s}</li>)}
                       </ul>
                     </div>
                     <div className="ai-box">
-                      <h4>📍 Top Compliment Phrases</h4>
+                      <h4><Bookmark size={16} /> Top Compliment Phrases</h4>
                       <div className="keyword-tags">
                         {insights.top_compliment_phrases?.map((kw, i) => (
                           <span key={i} className="kw-tag tag-success">{kw}</span>
@@ -374,7 +393,7 @@ export default function Dashboard({ theme, toggleTheme }) {
               
               <GlassCard className="chart-card">
                 <h3 className="section-title">
-                  <span role="img" aria-label="warning" style={{marginRight: '8px'}}>🚨</span> 
+                  <AlertCircle size={20} style={{marginRight: '8px', verticalAlign: 'middle', color: 'var(--error)'}} /> 
                   Top Complaints Detected
                 </h3>
                 {!insights ? (
@@ -392,7 +411,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                   </div>
                 ) : (
                   <div className="empty-state-small">
-                    <span className="empty-emoji">🎉</span>
+                    <CheckCircle2 size={32} style={{opacity: 0.5, marginBottom: '0.5rem'}} />
                     <p className="empty-text">No major complaints detected.</p>
                   </div>
                 )}
@@ -422,9 +441,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                       <td>{f.subjects?.name || 'Unknown'}</td>
                       <td>{f.staff?.name || 'N/A'}</td>
                       <td>
+                      <td>
                         <span className={`sentiment-badge ${f.sentiment_label?.toLowerCase() === 'positive' ? 'badge-positive' : f.sentiment_label?.toLowerCase() === 'negative' ? 'badge-negative' : 'badge-neutral'}`}>
-                          {f.sentiment_label === 'Positive' ? '✓' : f.sentiment_label === 'Negative' ? '✕' : '○'} {f.sentiment_label}
+                          {f.sentiment_label === 'Positive' ? <Check size={14} /> : f.sentiment_label === 'Negative' ? <X size={14} /> : <Minus size={14} />} {f.sentiment_label}
                         </span>
+                      </td>
                       </td>
                       <td style={{ minWidth: '400px' }}>{renderFormattedFeedback(f.feedback_text)}</td>
                     </tr>
@@ -448,9 +469,9 @@ export default function Dashboard({ theme, toggleTheme }) {
                 </div>
                 <p className="form-subtitle">Register a new Subject and its assigned Staff directly into your department.</p>
 
-                <form className="fancy-form" onSubmit={handleAddEntry}>
+                 <form className="fancy-form" onSubmit={handleAddEntry}>
                   <div className="fancy-input-wrapper">
-                    <span className="fancy-input-icon">📚</span>
+                    <span className="fancy-input-icon"><BookOpen size={18} /></span>
                     <input 
                       type="text" 
                       className="fancy-input" 
@@ -460,7 +481,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                     />
                   </div>
                   <div className="fancy-input-wrapper">
-                    <span className="fancy-input-icon">👤</span>
+                    <span className="fancy-input-icon"><User size={18} /></span>
                     <input 
                       type="text" 
                       className="fancy-input" 
@@ -489,10 +510,10 @@ export default function Dashboard({ theme, toggleTheme }) {
                   </button>
                 </div>
                 
-                <div className="manage-list">
+                 <div className="manage-list">
                   {staff.length === 0 && subjects.length === 0 ? (
                     <div className="empty-state">
-                      <div className="empty-icon">📂</div>
+                      <div className="empty-icon"><FolderOpen size={48} style={{opacity: 0.5}} /></div>
                       <p>No subjects or staff added yet.</p>
                     </div>
                   ) : null}
@@ -502,9 +523,9 @@ export default function Dashboard({ theme, toggleTheme }) {
 
                     return (
                       <div key={sub.id} className="inline-dir-row" style={{ '--row-index': index }}>
-                        {/* Left: Subject Info */}
+                         {/* Left: Subject Info */}
                         <div className="dir-subject">
-                          <div className="dir-icon">📚</div>
+                          <div className="dir-icon"><Book size={20} style={{color: 'var(--primary)'}} /></div>
                           <div className="dir-meta">
                             <div className="dir-title">{sub.name}</div>
                           </div>
@@ -568,9 +589,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                               onKeyDown={(e) => e.key === 'Enter' && handleSaveEditStaff(s.id)}
                             />
                           ) : (
-                            <h5>👤 {s.name}</h5>
+                            <h5><User size={16} style={{verticalAlign: 'middle', marginRight: '6px'}} /> {s.name}</h5>
                           )}
-                          <span style={{ display: 'block', marginTop: '4px' }}>🏠 Unassigned Staff • {profile.department}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                            <Home size={14} style={{opacity: 0.6}} /> Unassigned Staff • {profile.department}
+                          </span>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           {isEditingStaff ? (

@@ -48,7 +48,7 @@
   display: flex;
   gap: 0.25rem;
   margin-bottom: 2.5rem;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   padding: 0.35rem;
   border-radius: 12px;
   border: 1px solid var(--glass-border);
@@ -65,7 +65,7 @@
   font-weight: 600;
   font-size: 0.875rem;
   font-family: var(--font-primary);
-  color: var(--text-muted);
+  color: var(--text-sub);
   cursor: pointer;
   transition: var(--transition);
   display: flex;

@@ -28,6 +28,7 @@ export default function AuthFlow({ theme, toggleTheme }) {
         navigate('/student');
       }
     });
+
     return () => {
       subscription.unsubscribe();
     };

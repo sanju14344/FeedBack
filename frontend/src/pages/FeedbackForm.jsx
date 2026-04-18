@@ -4,6 +4,14 @@ import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
 import { submitFeedback } from '../api';
+import { 
+  CheckCircle2, 
+  Smile, 
+  Meh, 
+  Frown, 
+  Lock, 
+  Star 
+} from 'lucide-react';
 import './FeedbackForm.css';
 
 const QUESTIONS = [
@@ -29,8 +37,13 @@ function StarRating({ value, onChange }) {
             onMouseEnter={() => setHovered(star)}
             onMouseLeave={() => setHovered(0)}
             onClick={() => onChange(star)}
+            style={{ padding: '0.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            {isFilled ? '★' : '☆'}
+            <Star 
+              size={24} 
+              fill={isFilled ? "currentColor" : "none"} 
+              strokeWidth={isFilled ? 0 : 2} 
+            />
           </button>
         );
       })}
@@ -94,7 +107,11 @@ export default function FeedbackForm({ theme, toggleTheme }) {
   };
 
   const sentimentColors = { Positive: '#22c55e', Neutral: '#f59e0b', Negative: '#ef4444' };
-  const sentimentEmoji = { Positive: '😊', Neutral: '😐', Negative: '😟' };
+  const sentimentIcons = { 
+    Positive: <Smile size={20} style={{marginRight: '6px'}} />, 
+    Neutral: <Meh size={20} style={{marginRight: '6px'}} />, 
+    Negative: <Frown size={20} style={{marginRight: '6px'}} /> 
+  };
 
   if (submitted) {
     return (
@@ -105,14 +122,14 @@ export default function FeedbackForm({ theme, toggleTheme }) {
         <Header theme={theme} toggleTheme={toggleTheme} showAuth={false} />
         <main className="landing-main">
           <GlassCard className="success-card">
-            <div className="success-icon">✅</div>
+            <div className="success-icon"><CheckCircle2 size={64} style={{color: 'var(--success)'}} /></div>
             <h2 className="success-title">Feedback Submitted!</h2>
             <p className="success-subtitle">
               Your anonymous feedback for <strong>{subject?.name}</strong> has been recorded.
             </p>
             {sentiment && (
-              <div className="sentiment-pill" style={{ background: sentimentColors[sentiment] + '22', color: sentimentColors[sentiment], border: `1px solid ${sentimentColors[sentiment]}44` }}>
-                {sentimentEmoji[sentiment]} Detected as <strong>{sentiment}</strong>
+              <div className="sentiment-pill" style={{ display: 'inline-flex', alignItems: 'center', background: sentimentColors[sentiment] + '22', color: sentimentColors[sentiment], border: `1px solid ${sentimentColors[sentiment]}44` }}>
+                {sentimentIcons[sentiment]} Detected as <strong>{sentiment}</strong>
               </div>
             )}
             <div className="success-actions">
@@ -195,7 +212,7 @@ export default function FeedbackForm({ theme, toggleTheme }) {
 
             <div className="form-footer">
               <div className="anon-note">
-                🔒 Your submission is completely anonymous and cannot be traced back to you.
+                <Lock size={14} style={{marginRight: '6px', verticalAlign: 'middle'}} /> Your submission is completely anonymous and cannot be traced back to you.
               </div>
               <Button
                 variant="primary"

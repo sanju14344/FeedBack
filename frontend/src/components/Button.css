@@ -16,7 +16,7 @@
 
 .btn-primary {
   background: var(--gradient);
-  color: white;
+  color: white !important;
   box-shadow: 0 4px 15px var(--primary-glow);
 }
 

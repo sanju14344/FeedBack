@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
 import { getDepartmentsByYear } from '../api';
+import { supabase } from '../supabaseClient';
 import './StudentSelect.css';
 
 const YEARS = ['1', '2', '3', '4'];
@@ -11,7 +12,6 @@ const YEAR_LABELS = { '1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4
 
 export default function StudentSelect({ theme, toggleTheme }) {
   const navigate = useNavigate();
-  const studentUid = sessionStorage.getItem('student_uid') || 'guest-' + Math.random().toString(36).slice(2, 10);
 
   const [selectedYear, setSelectedYear] = useState('');
   const [departments, setDepartments] = useState([]);
@@ -19,13 +19,27 @@ export default function StudentSelect({ theme, toggleTheme }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Store UID in session storage so it persists across pages for this session
+  // Enforce authentication
   useEffect(() => {
-    if (!sessionStorage.getItem('student_uid')) {
-      sessionStorage.setItem('student_uid', studentUid);
-    }
-  }, []);
+    const checkAuth = async () => {
+      if (!supabase) {
+        setIsCheckingAuth(false);
+        return;
+      }
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Not signed in, redirect back to auth flow
+        navigate('/auth', { replace: true });
+      } else {
+        sessionStorage.setItem('student_uid', session.user.id);
+        setIsCheckingAuth(false);
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
     if (!selectedYear) return;
@@ -50,6 +64,10 @@ export default function StudentSelect({ theme, toggleTheme }) {
     sessionStorage.setItem('student_dept_name', dept?.name || '');
     navigate('/student/subjects');
   };
+
+  if (isCheckingAuth) {
+    return null; // or a loading spinner
+  }
 
   return (
     <div className="page-wrapper">
