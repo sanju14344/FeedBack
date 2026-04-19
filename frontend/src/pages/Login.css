@@ -1,90 +1,917 @@
-.login-card {
-  max-width: 450px;
+/* ══════════════════════════════════════════════════════════════
+   CR LOGIN PAGE — PREMIUM REDESIGN
+   Full dark gradient background · Glassmorphism card · Particles
+   ══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* ── Root Layer ────────────────────────────────────────────── */
+.cr-login-root {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  isolation: isolate;
+}
+
+/* ── Background Gradient ───────────────────────────────────── */
+.cr-bg-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 120% 80% at 60% -20%, #312e81 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at -10% 80%, #1e1b4b 0%, transparent 50%),
+    radial-gradient(ellipse 90% 70% at 100% 100%, #4c1d95 0%, transparent 55%),
+    linear-gradient(145deg, #0f0c29 0%, #1a1060 40%, #24243e 100%);
+}
+
+/* ── Floating Orbs ─────────────────────────────────────────── */
+.orbs-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+  animation: orbDrift linear infinite;
+}
+
+.orb-1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, #818cf8 0%, #4f46e5 100%);
+  top: -15%;
+  left: -10%;
+  animation-duration: 22s;
+}
+
+.orb-2 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, #a78bfa 0%, #7c3aed 100%);
+  bottom: -10%;
+  right: -10%;
+  animation-duration: 28s;
+  animation-direction: reverse;
+}
+
+.orb-3 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, #60a5fa 0%, #2563eb 100%);
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation-duration: 18s;
+  opacity: 0.12;
+}
+
+@keyframes orbDrift {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(40px, -30px) scale(1.05); }
+  66%  { transform: translate(-25px, 20px) scale(0.97); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.orb-3 {
+  animation-name: orbDrift3;
+}
+
+@keyframes orbDrift3 {
+  0%   { transform: translateX(-50%) scale(1); }
+  50%  { transform: translateX(calc(-50% + 50px)) scale(1.08); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* ── Particle Canvas ───────────────────────────────────────── */
+.particle-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── Center Stage ──────────────────────────────────────────── */
+.cr-center-stage {
+  position: relative;
+  z-index: 10;
   width: 100%;
-  padding: 3rem 2rem;
+  max-width: 480px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
-.login-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: var(--text-main);
-  text-align: center;
-}
-
-.login-subtitle {
-  font-size: 0.875rem;
-  color: var(--text-sub);
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.input-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-sub);
-}
-
-.custom-input {
-  padding: 0.875rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--glass-border);
-  background: var(--input-bg);
-  color: var(--text-main);
-  font-family: inherit;
-  font-size: 1rem;
-  outline: none;
-  transition: var(--transition);
-}
-
-.custom-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
-}
-
-.login-submit {
-  margin-top: 1rem;
+/* ── Card Wrapper ──────────────────────────────────────────── */
+.cr-card-wrapper {
   width: 100%;
-}
-
-.auth-tabs {
   display: flex;
-  background: var(--input-bg);
-  padding: 0.25rem;
-  border-radius: 8px;
-  border: 1px solid var(--glass-border);
-  margin-top: 1rem;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
-.auth-tab {
-  flex: 1;
-  padding: 0.5rem;
-  background: transparent;
+/* ── Back Button ───────────────────────────────────────────── */
+.cr-back-btn {
+  align-self: flex-start;
+  background: none;
   border: none;
+  color: rgba(196, 181, 253, 0.7);
+  font-size: 0.85rem;
   font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-sub);
-  border-radius: 6px;
   cursor: pointer;
-  transition: var(--transition);
+  padding: 0.3rem 0;
+  letter-spacing: 0.02em;
+  transition: color 0.2s ease;
+  font-family: inherit;
 }
 
-.auth-tab.active {
-  background: var(--bg-color);
-  color: var(--primary);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+.cr-back-btn:hover {
+  color: #c4b5fd;
+}
+
+/* ── Glass Card ────────────────────────────────────────────── */
+.cr-glass-card {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  border-radius: 24px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    0 32px 64px -12px rgba(0, 0, 0, 0.45),
+    0 8px 24px -4px rgba(99, 102, 241, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+  padding: 2.75rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+/* ── Card Header ───────────────────────────────────────────── */
+.cr-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  text-align: center;
+}
+
+.cr-logo-badge {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 60%, #a855f7 100%);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow:
+    0 12px 28px rgba(99, 102, 241, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  position: relative;
+}
+
+.cr-logo-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+}
+
+.cr-title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #1e1b4b;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.cr-subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 300px;
+}
+
+/* ── Tab Switcher ──────────────────────────────────────────── */
+.cr-tab-rail {
+  position: relative;
+  display: flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 4px;
+  gap: 0;
+}
+
+.cr-tab-pill {
+  position: absolute;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  top: 4px;
+  left: 4px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 10px;
+  box-shadow:
+    0 4px 14px rgba(99, 102, 241, 0.4),
+    0 0 0 1px rgba(255,255,255,0.15) inset;
+  z-index: 1;
+}
+
+.cr-tab-btn {
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  background: none;
+  border: none;
+  padding: 0.65rem 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color 0.25s ease;
+  letter-spacing: 0.01em;
+}
+
+.cr-tab-btn.cr-tab-active {
+  color: #fff;
+}
+
+/* ── Form ──────────────────────────────────────────────────── */
+.cr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.cr-extra-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  overflow: hidden;
+  /* Give room so the floating label of the first field is not clipped */
+  padding-top: 0.75rem;
+  margin-top: -0.75rem;
+}
+
+.cr-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  align-items: stretch;  /* ← both cells same height */
+}
+
+/* ── Field Wrapper ─────────────────────────────────────────── */
+.cr-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cr-field-icon {
+  position: absolute;
+  left: 1rem;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 2;
+  transition: color 0.25s ease;
+  flex-shrink: 0;
+}
+
+.cr-field.focused .cr-field-icon {
+  color: #6366f1;
+}
+
+/* ── Input ─────────────────────────────────────────────────── */
+.cr-input {
+  width: 100%;
+  padding: 1rem 1rem 1rem 2.85rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 13px;
+  color: #1e1b4b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+  -webkit-appearance: none;
+}
+
+.cr-input::placeholder {
+  color: transparent;
+}
+
+.cr-input::-webkit-autofill,
+.cr-input::-webkit-autofill:focus {
+  -webkit-text-fill-color: #1e1b4b;
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.cr-field.focused .cr-input,
+.cr-input:focus {
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.12),
+    0 2px 8px rgba(99, 102, 241, 0.08);
+}
+
+/* ── Floating Label ────────────────────────────────────────── */
+.cr-float-label {
+  position: absolute;
+  left: 2.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.93rem;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  padding: 0 0.25rem;
+  transform-origin: left top;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+/* Float UP when focused or has value */
+.cr-field.focused .cr-float-label,
+.cr-field.has-value .cr-float-label {
+  top: 0;
+  left: 0.85rem;
+  transform: translateY(-50%) scale(0.8);
+  font-size: 0.93rem;
+  color: #6366f1;
+  font-weight: 700;
+  background: #fff;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+}
+
+/* Select field — label starts closer (no left icon) */
+.cr-select ~ .cr-float-label {
+  left: 1rem;
+}
+.cr-field.focused .cr-select ~ .cr-float-label,
+.cr-field.has-value .cr-select ~ .cr-float-label {
+  left: 0.85rem;
+}
+
+/* Select variant — label always floated when year chosen */
+.cr-float-label--select {
+  top: 0 !important;
+  left: 0.85rem !important;
+  transform: translateY(-50%) scale(0.8) !important;
+  font-size: 0.93rem !important;
+  color: #6366f1 !important;
+  font-weight: 700 !important;
+  background: #fff !important;
+  padding: 0 0.35rem !important;
+  border-radius: 4px !important;
+}
+
+/* ── Select ────────────────────────────────────────────────── */
+.cr-select {
+  padding-left: 1rem !important;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Style native dropdown options for visibility */
+.cr-select option {
+  background: #ffffff;
+  color: #1e1b4b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.5rem;
+}
+
+/* ── Password Toggle ───────────────────────────────────────── */
+.cr-pass-toggle {
+  position: absolute;
+  right: 0.9rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  border-radius: 7px;
+  transition: color 0.2s ease, background 0.2s ease;
+  z-index: 3;
+}
+
+.cr-pass-toggle:hover {
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+/* ── Field Error State ─────────────────────────────────────── */
+.cr-field.field-error .cr-input {
+  border-color: #ef4444;
+  background: #fff5f5;
+}
+
+.cr-field.field-error .cr-input:focus {
+  border-color: #ef4444;
+  box-shadow:
+    0 0 0 3px rgba(239, 68, 68, 0.12),
+    0 2px 8px rgba(239, 68, 68, 0.08);
+}
+
+.cr-field.field-error .cr-field-icon {
+  color: #f87171;
+}
+
+.cr-field.field-error .cr-float-label {
+  color: #ef4444;
+}
+
+/* Year dropdown error */
+.yr-wrap--error .yr-trigger {
+  border-color: #ef4444;
+  background: #fff5f5;
+}
+
+.yr-wrap--error .yr-label {
+  color: #ef4444;
+}
+
+
+/* ── Alerts ────────────────────────────────────────────────── */
+.cr-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 1rem;
+  border-radius: 11px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.cr-alert--error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.cr-alert--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ── Submit Button ─────────────────────────────────────────── */
+.cr-submit-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.95rem 1.5rem;
+  margin-top: 0.3rem;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
+  border: none;
+  border-radius: 13px;
+  color: #fff;
+  font-size: 0.97rem;
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow:
+    0 10px 30px -4px rgba(99, 102, 241, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  transition:
+    box-shadow 0.25s ease,
+    opacity 0.2s ease;
+}
+
+.cr-submit-btn:not(:disabled):hover {
+  box-shadow:
+    0 14px 36px -4px rgba(99, 102, 241, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.cr-submit-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/* Shimmer overlay */
+.cr-submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  transform: skewX(-20deg);
+  animation: btnShimmer 2.8s infinite;
+}
+
+@keyframes btnShimmer {
+  0%   { left: -100%; }
+  60%  { left: 140%; }
+  100% { left: 140%; }
+}
+
+/* ── Loading Spinner ───────────────────────────────────────── */
+.cr-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer Hint ───────────────────────────────────────────── */
+.cr-footer-hint {
+  text-align: center;
+  font-size: 0.83rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cr-link-btn {
+  background: none;
+  border: none;
+  color: #6366f1;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease;
+}
+
+.cr-link-btn:hover {
+  color: #4f46e5;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CUSTOM YEAR DROPDOWN
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Wrapper ───────────────────────────────────────────────── */
+.yr-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;              /* ← fill the grid cell height */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Floating label ────────────────────────────────────────── */
+.yr-label {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.93rem;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  padding: 0 0.25rem;
+  z-index: 3;
+  white-space: nowrap;
+}
+
+/* Float up when open OR value selected */
+.yr-wrap.yr-open .yr-label,
+.yr-wrap.yr-has-value .yr-label {
+  top: 0;
+  left: 0.75rem;
+  transform: translateY(-50%) scale(0.8);
+  color: #6366f1;
+  font-weight: 700;
+  background: #fff;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+}
+
+/* ── Trigger button ────────────────────────────────────────── */
+.yr-trigger {
+  width: 100%;
+  flex: 1;                   /* ← stretch to fill yr-wrap height */
+  min-height: 52px;          /* ← same minimum as cr-input */
+  padding: 1rem 2.5rem 1rem 1rem;
+  box-sizing: border-box;    /* ← padding included in size calculation */
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 13px;
+  color: #1e1b4b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition:
+    border-color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease;
+  position: relative;
+}
+
+.yr-trigger:hover {
+  border-color: #a5b4fc;
+  background: #f5f3ff;
+}
+
+.yr-wrap.yr-open .yr-trigger {
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.12),
+    0 2px 8px rgba(99, 102, 241, 0.08);
+}
+
+.yr-trigger-text {
+  flex: 1;
+  line-height: 1;
+  color: #1e1b4b;
+}
+
+.yr-placeholder {
+  color: transparent; /* hide when empty — label does the job */
+}
+
+/* ── Chevron icon ──────────────────────────────────────────── */
+.yr-chevron {
+  position: absolute;
+  right: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.yr-wrap.yr-open .yr-chevron {
+  color: #6366f1;
+}
+
+/* ── Dropdown menu panel ───────────────────────────────────── */
+.yr-menu {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow:
+    0 16px 40px -8px rgba(99, 102, 241, 0.22),
+    0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Portal variant — positioned via inline style, needs high z-index */
+.yr-menu--portal {
+  z-index: 9999;
+}
+
+/* ── Each option ───────────────────────────────────────────── */
+.yr-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  user-select: none;
+}
+
+.yr-option:hover {
+  background: #f5f3ff;
+  color: #6366f1;
+}
+
+/* Selected state */
+.yr-option--selected {
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+.yr-option--selected:hover {
+  background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+}
+
+.yr-check {
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .cr-glass-card {
+    padding: 2.25rem 1.6rem;
+    border-radius: 20px;
+    gap: 1.35rem;
+  }
+
+  .cr-center-stage {
+    padding: 1rem;
+  }
+
+  .cr-title {
+    font-size: 1.5rem;
+  }
+
+  .cr-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   ADMIN LOGIN THEME  —  Distinct crimson / dark authority look
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Admin background ─────────────────────────────────────── */
+.cr-login-root--admin .cr-bg-gradient {
+  background:
+    radial-gradient(ellipse 110% 70% at 70% -15%, #4c0519 0%, transparent 55%),
+    radial-gradient(ellipse 80% 55% at -10% 80%, #1c0a00 0%, transparent 50%),
+    radial-gradient(ellipse 90% 65% at 100% 100%, #3b0764 0%, transparent 55%),
+    linear-gradient(145deg, #0a0610 0%, #12060c 40%, #1a0510 100%);
+}
+
+/* ── Admin orbs — red / amber tones ──────────────────────── */
+.cr-login-root--admin .orb-1 {
+  background: radial-gradient(circle, #f43f5e 0%, #be123c 100%);
+  opacity: 0.15;
+}
+
+.cr-login-root--admin .orb-2 {
+  background: radial-gradient(circle, #fb923c 0%, #c2410c 100%);
+  opacity: 0.12;
+}
+
+.cr-login-root--admin .orb-3 {
+  background: radial-gradient(circle, #e879f9 0%, #7e22ce 100%);
+  opacity: 0.10;
+}
+
+/* ── Admin glass card ─────────────────────────────────────── */
+.cr-login-root--admin .cr-glass-card {
+  background: rgba(10, 5, 15, 0.72);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+  box-shadow:
+    0 32px 64px -12px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(244, 63, 94, 0.1),
+    0 0 60px -20px rgba(244, 63, 94, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ── Admin text ───────────────────────────────────────────── */
+.cr-login-root--admin .cr-title {
+  color: #fef2f2;
+}
+
+.cr-login-root--admin .cr-subtitle {
+  color: rgba(252, 165, 165, 0.6);
+}
+
+/* ── Admin badge ──────────────────────────────────────────── */
+.cr-logo-badge--admin {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #7f1d1d 100%) !important;
+  box-shadow:
+    0 12px 28px rgba(220, 38, 38, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+}
+
+/* ── Admin inputs ─────────────────────────────────────────── */
+.cr-login-root--admin .cr-input {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(244, 63, 94, 0.2);
+  color: #fef2f2;
+}
+
+.cr-login-root--admin .cr-input::-webkit-autofill,
+.cr-login-root--admin .cr-input::-webkit-autofill:focus {
+  -webkit-text-fill-color: #fef2f2;
+  -webkit-box-shadow: 0 0 0 1000px rgba(20, 5, 10, 0.95) inset;
+}
+
+.cr-login-root--admin .cr-field.focused .cr-input,
+.cr-login-root--admin .cr-input:focus {
+  border-color: #f43f5e;
+  background: rgba(244, 63, 94, 0.07);
+  box-shadow:
+    0 0 0 3px rgba(244, 63, 94, 0.14),
+    0 2px 8px rgba(244, 63, 94, 0.1);
+}
+
+/* ── Admin floating label ─────────────────────────────────── */
+.cr-login-root--admin .cr-float-label {
+  color: rgba(252, 165, 165, 0.45);
+}
+
+.cr-login-root--admin .cr-field.focused .cr-float-label,
+.cr-login-root--admin .cr-field.has-value .cr-float-label {
+  color: #f43f5e;
+  background: linear-gradient(180deg, #0a0612 0%, #0d060a 100%);
+}
+
+/* ── Admin icons ──────────────────────────────────────────── */
+.cr-login-root--admin .cr-field-icon {
+  color: rgba(252, 165, 165, 0.4);
+}
+
+.cr-login-root--admin .cr-field.focused .cr-field-icon {
+  color: #f43f5e;
+}
+
+.cr-login-root--admin .cr-pass-toggle {
+  color: rgba(252, 165, 165, 0.4);
+}
+
+.cr-login-root--admin .cr-pass-toggle:hover {
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.08);
+}
+
+/* ── Admin submit button ──────────────────────────────────── */
+.cr-login-root--admin .cr-submit-btn {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 45%, #7c3aed 100%);
+  box-shadow:
+    0 10px 30px -4px rgba(220, 38, 38, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.cr-login-root--admin .cr-submit-btn:not(:disabled):hover {
+  box-shadow:
+    0 14px 36px -4px rgba(220, 38, 38, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+
+/* ── Admin back button ────────────────────────────────────── */
+.cr-login-root--admin .cr-back-btn {
+  color: rgba(252, 165, 165, 0.55);
+}
+
+.cr-login-root--admin .cr-back-btn:hover {
+  color: #fca5a5;
+}
+
+/* ── Admin field error ────────────────────────────────────── */
+.cr-login-root--admin .cr-field.field-error .cr-input {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: #f43f5e;
+}
+
+.cr-login-root--admin .cr-field.field-error .cr-float-label {
+  color: #fca5a5;
 }
