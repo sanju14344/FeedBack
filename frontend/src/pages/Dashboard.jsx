@@ -22,6 +22,7 @@ import {
   Book,
   RefreshCw,
   TrendingUp,
+  TrendingDown,
   Bell,
   Filter,
   Calendar,
@@ -34,7 +35,11 @@ import {
   FileText,
   Clock,
   PieChart as PieIcon,
-  ListTodo
+  ListTodo,
+  AlertTriangle,
+  Zap,
+  Target,
+  Shield
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -102,6 +107,103 @@ const getSentimentTrend = (feedback) => {
     else dates[d].neu++;
   });
   return Object.entries(dates).map(([name, data]) => ({ name, ...data })).reverse().slice(-7);
+};
+
+const getSatisfactionTrend = (feedback) => {
+  const dates = {};
+  feedback.forEach(f => {
+    const d = new Date(f.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (!dates[d]) dates[d] = { pos: 0, total: 0 };
+    dates[d].total++;
+    if (f.sentiment_label === 'Positive') dates[d].pos++;
+  });
+  return Object.entries(dates)
+    .map(([name, data]) => ({ name, value: data.total > 0 ? Math.round((data.pos / data.total) * 100) : 0 }))
+    .reverse().slice(-7);
+};
+
+const getTrendDelta = (feedback, key = 'total') => {
+  const now = Date.now();
+  const week = 7 * 24 * 60 * 60 * 1000;
+  const recent = feedback.filter(f => now - new Date(f.created_at).getTime() < week);
+  const prior = feedback.filter(f => {
+    const age = now - new Date(f.created_at).getTime();
+    return age >= week && age < 2 * week;
+  });
+  const getCount = (arr, k) => {
+    if (k === 'total') return arr.length;
+    if (k === 'positive') return arr.filter(f => f.sentiment_label === 'Positive').length;
+    if (k === 'negative') return arr.filter(f => f.sentiment_label === 'Negative').length;
+    return arr.length;
+  };
+  const rCount = getCount(recent, key);
+  const pCount = getCount(prior, key);
+  if (pCount === 0) return null;
+  return Math.round(((rCount - pCount) / pCount) * 100);
+};
+
+const getAlerts = (feedback, subjects, dismissed = []) => {
+  const alerts = [];
+  subjects.forEach(sub => {
+    const subFb = feedback.filter(f => f.subject_id === sub.id);
+    if (subFb.length === 0) return;
+    const pos = subFb.filter(f => f.sentiment_label === 'Positive').length;
+    const score = Math.round((pos / subFb.length) * 100);
+    const id = `low-sat-${sub.id}`;
+    if (!dismissed.includes(id)) {
+      if (score < 50) {
+        alerts.push({ id, level: 'critical', subject: sub.name, message: `Critically low satisfaction at ${score}% — immediate attention needed` });
+      } else if (score < 65) {
+        alerts.push({ id, level: 'warning', subject: sub.name, message: `Below-average satisfaction at ${score}% — trending negatively` });
+      }
+    }
+  });
+  const negDelta = getTrendDelta(feedback, 'negative');
+  const negAlertId = 'neg-trend-week';
+  if (negDelta !== null && negDelta > 20 && !dismissed.includes(negAlertId)) {
+    alerts.push({ id: negAlertId, level: 'warning', subject: 'Overall', message: `Negative feedback surged ${negDelta}% this week` });
+  }
+  return alerts;
+};
+
+const Sparkline = ({ data, color = 'var(--primary)', height = 28, width = 72 }) => {
+  if (!data || data.length < 2) return null;
+  const vals = data.map(d => d.value);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="sparkline-svg" style={{ overflow: 'visible' }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
+    </svg>
+  );
+};
+
+const CircularProgress = ({ score, size = 68 }) => {
+  const strokeWidth = 5;
+  const radius = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (Math.min(score, 100) / 100) * circ;
+  const color = score >= 75 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--error)';
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="circular-ring-svg">
+      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+      <circle
+        cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 1.2s ease' }}
+      />
+      <text x="50%" y="50%" textAnchor="middle" dy="0.35em" fill={color} fontSize={size * 0.21} fontWeight="800" fontFamily="inherit">
+        {score}%
+      </text>
+    </svg>
+  );
 };
 
 const renderFormattedFeedback = (text) => {
@@ -172,6 +274,17 @@ export default function Dashboard({ theme, toggleTheme }) {
   
   // Refactored Management UI States
   const [editingItem, setEditingItem] = useState({ type: null, subId: null, subName: '', staffId: null, staffName: '' });
+
+  // === UPGRADE: New state for premium features ===
+  const [trendToggle, setTrendToggle] = useState('sentiment');
+  const [actionPriority, setActionPriority] = useState('Medium');
+  const [actionSubjectTag, setActionSubjectTag] = useState('');
+  const [alertsDismissed, setAlertsDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cr_alerts_dismissed') || '[]'); } catch { return []; }
+  });
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionEndSummary, setSessionEndSummary] = useState(null);
+  const [lastUpdated] = useState(new Date());
 
   useEffect(() => {
     const uid = sessionStorage.getItem('cr_uid');
@@ -263,11 +376,15 @@ export default function Dashboard({ theme, toggleTheme }) {
     const newAction = {
       id: Date.now(),
       text: newActionText,
+      priority: actionPriority,
+      subjectTag: actionSubjectTag || null,
       completed: false,
       date: new Date().toISOString()
     };
     setActions([newAction, ...actions]);
     setNewActionText('');
+    setActionSubjectTag('');
+    setActionPriority('Medium');
   };
 
   const toggleAction = (id) => {
@@ -396,18 +513,43 @@ export default function Dashboard({ theme, toggleTheme }) {
   const handleEndSession = async () => {
     if (!profile?.dept_id) return;
     setSessionLoading(true);
+    // Capture summary snapshot before ending
+    const posCount = feedback.filter(f => f.sentiment_label === 'Positive').length;
+    const negCount = feedback.filter(f => f.sentiment_label === 'Negative').length;
+    const dominant = posCount > negCount ? 'Positive' : negCount > posCount ? 'Negative' : 'Neutral';
+    const sessionDuration = session?.started_at
+      ? Math.round((Date.now() - new Date(session.started_at).getTime()) / 60000)
+      : 0;
     try {
       await endSession({ dept_id: profile.dept_id, cr_id: profile.id });
       setSession(null);
       setShowEndConfirm(false);
       const histRes = await getSessionHistory(profile.dept_id);
+      const lastSes = (histRes.data || [])[0];
       setSessionHistory(histRes.data || []);
+      setSessionEndSummary({
+        duration: sessionDuration,
+        studentCount: lastSes?.student_count ?? '—',
+        dominant,
+        topComplaint: insights?.top_complaint_phrases?.[0] || null,
+        satisfaction: insights?.satisfaction_score || 0,
+        posCount,
+        negCount,
+        totalFeedback: feedback.length
+      });
+      setShowSessionSummary(true);
     } catch (err) {
       alert('Failed to end session');
       console.error(err);
     } finally {
       setSessionLoading(false);
     }
+  };
+
+  const dismissAlert = (id) => {
+    const updated = [...alertsDismissed, id];
+    setAlertsDismissed(updated);
+    localStorage.setItem('cr_alerts_dismissed', JSON.stringify(updated));
   };
 
   const onLogout = () => {
@@ -459,118 +601,164 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <p className="workspace-sub">Real-time feedback intelligence for {profile?.department}</p>
                </div>
                <div className="ah-right">
-                  <span className="last-sync"><RefreshCw size={12} className={isAnalyzing ? 'spin' : ''} /> {insights ? 'Synced' : 'Syncing...'}</span>
-                  <Button onClick={() => setPdfConfirm({ type: `full` })} variant="primary" className="btn-report">
+                  {session && <span className="session-live-badge"><span className="slb-dot"/>LIVE SESSION</span>}
+                  <span className="last-sync"><RefreshCw size={12} className={isAnalyzing ? 'spin' : ''} /> {lastUpdated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+                  <Button onClick={() => setPdfConfirm({ type: 'full' })} variant="primary" className="btn-report">
                     <FileText size={16} /> Export PDF
                   </Button>
                </div>
             </div>
 
             {/* --- CORE STATS GRID --- */}
-            <div className="stats-row">
-              {[
-                { label: 'Total Logs', val: feedback.length, icon: <MessageSquare size={20} />, color: 'primary' },
-                { label: 'Positive', val: feedback.filter(f => f.sentiment_label === 'Positive').length, icon: <CheckCircle2 size={20} />, color: 'success' },
-                { label: 'Negative', val: feedback.filter(f => f.sentiment_label === 'Negative').length, icon: <AlertCircle size={20} />, color: 'error' },
-                { label: 'Satisfaction', val: insights ? `${insights.satisfaction_score}%` : '--%', icon: <Award size={20} />, color: 'accent' },
-              ].map((s, i) => (
-                <GlassCard key={i} className={`stat-card-new stat-${s.color}`}>
-                  <div className="scn-icon">{s.icon}</div>
-                  <div className="scn-info">
-                    <span className="scn-label">{s.label}</span>
-                    <span className="scn-val">{s.val}</span>
-                  </div>
-                  <div className="scn-graph-peak">
-                    <Activity size={16} />
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
+            {(() => {
+              const sparkFb = getTrendData(feedback);
+              const sparkPos = getSentimentTrend(feedback).map(d => ({ value: d.pos }));
+              const sparkNeg = getSentimentTrend(feedback).map(d => ({ value: d.neg }));
+              const dTotal = getTrendDelta(feedback, 'total');
+              const dPos   = getTrendDelta(feedback, 'positive');
+              const dNeg   = getTrendDelta(feedback, 'negative');
+              const cards = [
+                { label: 'Total Feedback', val: feedback.length, icon: <MessageSquare size={20}/>, color: 'primary', delta: dTotal, spark: sparkFb, sparkColor: 'var(--primary)' },
+                { label: 'Positive',       val: feedback.filter(f=>f.sentiment_label==='Positive').length, icon:<CheckCircle2 size={20}/>, color:'success', delta:dPos, spark:sparkPos, sparkColor:'var(--success)' },
+                { label: 'Negative',       val: feedback.filter(f=>f.sentiment_label==='Negative').length, icon:<AlertCircle size={20}/>, color:'error',   delta:dNeg, spark:sparkNeg, sparkColor:'var(--error)' },
+                { label: 'Satisfaction',   val: insights?`${insights.satisfaction_score}%`:'--%',          icon:<Award size={20}/>,        color:'accent', delta:null, spark:getSatisfactionTrend(feedback), sparkColor:'var(--accent)' },
+              ];
+              return (
+                <div className="stats-row">
+                  {cards.map((s, i) => (
+                    <motion.div key={i} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:i*0.07}} whileHover={{scale:1.03}} className={`stat-card-new stat-${s.color}`}>
+                      <div className="scn-icon">{s.icon}</div>
+                      <div className="scn-info">
+                        <span className="scn-label">{s.label}</span>
+                        <span className="scn-val">{s.val}</span>
+                        {s.delta !== null && s.delta !== undefined && (
+                          <span className={`scn-trend ${s.delta >= 0 ? 'up' : 'down'}`}>
+                            {s.delta >= 0 ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
+                            {Math.abs(s.delta)}% vs last week
+                          </span>
+                        )}
+                      </div>
+                      <div className="scn-sparkline">
+                        <Sparkline data={s.spark} color={s.sparkColor} />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* --- AI INTELLIGENCE & TRENDS PANEL --- */}
             <div className="intelligence-grid">
-              {/* AI Structured Card */}
-              <GlassCard className="ai-insight-panel">
+              {/* AI Command Center */}
+              <div className={`ai-insight-panel glass-card ${isAnalyzing ? 'ai-analyzing' : ''}`}>
                 <div className="ai-panel-header">
                   <div className="aip-title-group">
-                    <Sparkles size={22} className="text-primary" />
-                    <h3>AI Intelligence Report</h3>
+                    <div className="ai-sparkles-icon"><Sparkles size={20}/></div>
+                    <div>
+                      <h3>AI Command Center</h3>
+                      <span className="ai-panel-sub">Powered by sentiment intelligence</span>
+                    </div>
                   </div>
-                  <button 
-                    className={`reanalyze-btn ${isAnalyzing ? 'loading' : ''}`}
-                    onClick={reAnalyze}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? <RefreshCw size={16} className="spin" /> : <RefreshCw size={16} />}
-                    {isAnalyzing ? 'Analyzing...' : 'Re-analyze'}
+                  <button className={`reanalyze-btn ${isAnalyzing?'loading':''}`} onClick={reAnalyze} disabled={isAnalyzing}>
+                    <RefreshCw size={15} className={isAnalyzing?'spin':''}/>
+                    {isAnalyzing?'Analyzing...':'Re-analyze'}
                   </button>
                 </div>
 
-                {insights ? (
+                {isAnalyzing ? (
+                  <div className="ai-skeleton-body">
+                    <div className="skel skel-badge"/><div className="skel skel-bar"/>
+                    <div className="skel skel-line"/><div className="skel skel-line short"/>
+                    <div className="skel skel-line"/><div className="skel skel-line short"/>
+                  </div>
+                ) : insights ? (
                   <div className="ai-structured-body">
                     <div className="ai-status-row">
-                       <span className={`ai-badge ${insights.ai_overall?.toLowerCase()}`}>
-                         {insights.ai_overall} Sentiment
-                       </span>
-                       <span className="ai-conf">Confidence Score: {calculateConfidence(feedback.length)}%</span>
+                      <span className={`ai-badge ${insights.ai_overall?.toLowerCase()}`}>
+                        {insights.ai_overall} Sentiment
+                      </span>
+                      <div className="ai-conf-wrap">
+                        <span className="ai-conf-label">Confidence</span>
+                        <div className="conf-bar"><div className="conf-fill" style={{width:`${calculateConfidence(feedback.length)}%`}}/></div>
+                        <span className="ai-conf-pct">{calculateConfidence(feedback.length)}%</span>
+                      </div>
                     </div>
 
                     <div className="ai-content-blocks">
                       <div className="ai-block block-success">
-                        <label><CheckCircle2 size={14} /> Key Strengths</label>
-                        <ul>
-                          {insights.ai_strengths?.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
+                        <label><CheckCircle2 size={14}/> Key Strengths</label>
+                        <ul>{insights.ai_strengths?.map((s,i)=>(
+                          <motion.li key={i} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} transition={{delay:i*0.06}}>{s}</motion.li>
+                        ))}</ul>
                       </div>
                       <div className="ai-block block-warning">
-                        <label><AlertCircle size={14} /> Critical Issues</label>
-                        <ul>
-                          {insights.ai_improvements?.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
+                        <label><AlertCircle size={14}/> Critical Issues</label>
+                        <ul>{insights.ai_improvements?.map((s,i)=>(
+                          <motion.li key={i} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} transition={{delay:i*0.06}}>{s}</motion.li>
+                        ))}</ul>
                       </div>
                     </div>
-                    
+
                     <div className="ai-action-suggestion">
-                      <label><Lightbulb size={16} /> Recommended Actions</label>
+                      <label><Lightbulb size={16}/> Recommended Actions</label>
                       <div className="suggestion-tags">
-                        {insights.ai_suggestions?.map((s, i) => (
-                          <div key={i} className="s-tag">{s}</div>
+                        {insights.ai_suggestions?.map((s,i)=>(
+                          <motion.div key={i} className="s-tag" whileHover={{scale:1.05}} initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.1+i*0.06}}>{s}</motion.div>
                         ))}
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="ai-loading-placeholder">
-                    <div className="pulse-circle" />
+                    <div className="pulse-circle"/>
                     <p>Aggregating sentiment patterns...</p>
                   </div>
                 )}
-              </GlassCard>
+              </div>
 
               {/* Trends Chart */}
               <GlassCard className="trends-panel">
                 <div className="panel-header">
-                  <h3><TrendingUp size={20} /> Trend Analysis</h3>
-                  <div className="trend-legend">
-                    <span className="dot pos"></span> Pos
-                    <span className="dot neg"></span> Neg
+                  <h3><TrendingUp size={20}/> Trend Analysis</h3>
+                  <div className="trend-toggle-group">
+                    {['sentiment','feedback','satisfaction'].map(t=>(
+                      <button key={t} className={`trend-toggle-btn ${trendToggle===t?'active':''}`} onClick={()=>setTrendToggle(t)}>
+                        {t.charAt(0).toUpperCase()+t.slice(1)}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={getSentimentTrend(feedback)}>
-                      <defs>
-                        <linearGradient id="colorPos" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--success)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--success)" stopOpacity={0}/></linearGradient>
-                        <linearGradient id="colorNeg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--error)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--error)" stopOpacity={0}/></linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)', fontSize: 10}} />
-                      <Tooltip 
-                        contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--glass-border)', borderRadius: '8px', fontSize: '12px' }}
-                      />
-                      <Area type="monotone" dataKey="pos" stroke="var(--success)" fillOpacity={1} fill="url(#colorPos)" strokeWidth={2} />
-                      <Area type="monotone" dataKey="neg" stroke="var(--error)" fillOpacity={1} fill="url(#colorNeg)" strokeWidth={2} />
-                    </AreaChart>
+                    {trendToggle==='sentiment' ? (
+                      <AreaChart data={getSentimentTrend(feedback)}>
+                        <defs>
+                          <linearGradient id="colorPos" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--success)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--success)" stopOpacity={0}/></linearGradient>
+                          <linearGradient id="colorNeg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--error)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--error)" stopOpacity={0}/></linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--text-muted)',fontSize:10}}/>
+                        <Tooltip contentStyle={{background:'var(--bg-elevated)',border:'1px solid var(--glass-border)',borderRadius:'8px',fontSize:'12px'}}/>
+                        <Area type="monotone" dataKey="pos" name="Positive" stroke="var(--success)" fillOpacity={1} fill="url(#colorPos)" strokeWidth={2}/>
+                        <Area type="monotone" dataKey="neg" name="Negative" stroke="var(--error)"   fillOpacity={1} fill="url(#colorNeg)" strokeWidth={2}/>
+                      </AreaChart>
+                    ) : trendToggle==='feedback' ? (
+                      <AreaChart data={getTrendData(feedback)}>
+                        <defs><linearGradient id="colorFb" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/></linearGradient></defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--text-muted)',fontSize:10}}/>
+                        <Tooltip contentStyle={{background:'var(--bg-elevated)',border:'1px solid var(--glass-border)',borderRadius:'8px',fontSize:'12px'}}/>
+                        <Area type="monotone" dataKey="value" name="Feedback Count" stroke="var(--primary)" fillOpacity={1} fill="url(#colorFb)" strokeWidth={2}/>
+                      </AreaChart>
+                    ) : (
+                      <AreaChart data={getSatisfactionTrend(feedback)}>
+                        <defs><linearGradient id="colorSat" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/></linearGradient></defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--text-muted)',fontSize:10}}/>
+                        <Tooltip contentStyle={{background:'var(--bg-elevated)',border:'1px solid var(--glass-border)',borderRadius:'8px',fontSize:'12px'}} formatter={v=>[`${v}%`,'Satisfaction']}/>
+                        <Area type="monotone" dataKey="value" name="Satisfaction %" stroke="var(--accent)" fillOpacity={1} fill="url(#colorSat)" strokeWidth={2}/>
+                      </AreaChart>
+                    )}
                   </ResponsiveContainer>
                 </div>
               </GlassCard>
@@ -583,93 +771,156 @@ export default function Dashboard({ theme, toggleTheme }) {
                 <span className="badge-count">{subjects.length} Subjects</span>
               </div>
               <div className="subject-cards-grid">
-                {subjects.map(sub => {
+                {subjects.map((sub, idx) => {
                   const subFeedback = feedback.filter(f => f.subject_id === sub.id);
                   const posCount = subFeedback.filter(f => f.sentiment_label === 'Positive').length;
-                  const score = subFeedback.length > 0 ? (posCount / subFeedback.length) * 100 : 0;
-                  
+                  const negCount = subFeedback.filter(f => f.sentiment_label === 'Negative').length;
+                  const neuCount = subFeedback.filter(f => f.sentiment_label === 'Neutral').length;
+                  const score = subFeedback.length > 0 ? Math.round((posCount / subFeedback.length) * 100) : 0;
+                  const assignedFaculty = staff.find(s => s.subject_id === sub.id);
+                  const healthClass = score >= 75 ? 'healthy' : score >= 50 ? 'moderate' : 'critical';
                   return (
-                    <motion.div 
+                    <motion.div
                       key={sub.id}
-                      layoutId={sub.id}
-                      className={`subject-score-card ${expandedSubject === sub.id ? 'expanded' : ''}`}
-                      onClick={() => setExpandedSubject(expandedSubject === sub.id ? null : sub.id)}
-                      whileHover={{ y: -5 }}
+                      className={`subject-score-card ${healthClass} ${expandedSubject===sub.id?'expanded':''}`}
+                      onClick={() => setExpandedSubject(expandedSubject===sub.id ? null : sub.id)}
+                      whileHover={{ y: -6, boxShadow: '0 12px 32px rgba(124,58,237,0.2)' }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.06 }}
                     >
                       <div className="ssc-main">
                         <div className="ssc-info">
                           <h4>{sub.name}</h4>
-                          <span className="ssc-count">{subFeedback.length} Feedbacks</span>
+                          <span className="ssc-faculty"><User size={11}/> {assignedFaculty?.name || 'Faculty'}</span>
+                          <span className="ssc-count">{subFeedback.length} responses</span>
                         </div>
-                        <div className={`ssc-score ${score >= 75 ? 'good' : score >= 50 ? 'mid' : 'bad'}`}>
-                          {score.toFixed(0)}%
-                        </div>
+                        <CircularProgress score={score} />
                       </div>
-                      
-                      <div className="ssc-mini-status">
-                         <div className="status-bar"><div className="status-fill" style={{ width: `${score}%` }} /></div>
-                      </div>
-
+                      <div className={`ssc-health-bar health-${healthClass}`}/>
                       {expandedSubject === sub.id && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ssc-details">
-                          <div className="ssc-metrics">
-                             <div className="m-item"><span>Positive</span> <label className="text-success">{posCount}</label></div>
-                             <div className="m-item"><span>Neutral</span> <label className="text-warning">{subFeedback.filter(f => f.sentiment_label === 'Neutral').length}</label></div>
-                             <div className="m-item"><span>Negative</span> <label className="text-error">{subFeedback.filter(f => f.sentiment_label === 'Negative').length}</label></div>
+                        <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} className="ssc-details">
+                          <div className="ssc-mini-bar">
+                            {subFeedback.length > 0 && (
+                              <>
+                                <div className="smb-fill smb-pos" style={{width:`${(posCount/subFeedback.length)*100}%`}}/>
+                                <div className="smb-fill smb-neu" style={{width:`${(neuCount/subFeedback.length)*100}%`}}/>
+                                <div className="smb-fill smb-neg" style={{width:`${(negCount/subFeedback.length)*100}%`}}/>
+                              </>
+                            )}
                           </div>
-                          <p className="ssc-note">Latest concern: {subFeedback[0]?.feedback_text ? (subFeedback[0].feedback_text.substring(0, 40) + '...') : 'No feedback yet'}</p>
+                          <div className="ssc-metrics">
+                            <div className="m-item"><span>Positive</span><label className="text-success">{posCount}</label></div>
+                            <div className="m-item"><span>Neutral</span><label className="text-warning">{neuCount}</label></div>
+                            <div className="m-item"><span>Negative</span><label className="text-error">{negCount}</label></div>
+                          </div>
+                          {subFeedback[0]?.feedback_text && (
+                            <p className="ssc-note">Latest: "{subFeedback[0].feedback_text.substring(0,60)}..."</p>
+                          )}
                         </motion.div>
                       )}
                     </motion.div>
-                  )
+                  );
                 })}
               </div>
             </div>
 
-            {/* --- KEYWORDS & ALERTS CENTER --- */}
+            {/* --- ALERTS & WARNINGS PANEL --- */}
+            {(() => {
+              const activeAlerts = getAlerts(feedback, subjects, alertsDismissed);
+              if (activeAlerts.length === 0) return null;
+              return (
+                <div className="alerts-section">
+                  <div className="section-header-row">
+                    <h3 className="sub-section-title"><AlertTriangle size={20}/> Attention Needed
+                      <span className="alerts-count-badge">{activeAlerts.length}</span>
+                    </h3>
+                  </div>
+                  <div className="alerts-grid">
+                    {activeAlerts.map(alert => (
+                      <motion.div key={alert.id} className={`alert-card alert-${alert.level}`}
+                        initial={{opacity:0,x:-12}} animate={{opacity:1,x:0}} exit={{opacity:0,x:12}}
+                      >
+                        <div className="alert-icon-wrap">
+                          {alert.level==='critical' ? <AlertCircle size={18}/> : <AlertTriangle size={18}/>}
+                        </div>
+                        <div className="alert-body">
+                          <span className="alert-subject">{alert.subject}</span>
+                          <p className="alert-msg">{alert.message}</p>
+                        </div>
+                        <button className="alert-dismiss" onClick={()=>dismissAlert(alert.id)}><X size={14}/></button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* --- KEYWORDS & ACTION CENTER --- */}
             <div className="action-center-grid">
                {/* Keywords Cloud */}
                <GlassCard className="keywords-cloud">
                  <div className="panel-header">
-                   <h3><Terminal size={18} /> Top Sentiment Phrases</h3>
+                   <h3><Terminal size={18}/> Top Sentiment Phrases</h3>
                  </div>
                  <div className="tag-cloud">
-                   {insights?.top_compliment_phrases?.map((p, i) => (
-                     <span key={i} className="cloud-tag tag-pos">{p}</span>
+                   {insights?.top_compliment_phrases?.map((p,i) => (
+                     <motion.span key={i} className="cloud-tag tag-pos" whileHover={{scale:1.08}}>{p}</motion.span>
                    ))}
-                   {insights?.top_complaint_phrases?.map((p, i) => (
-                     <span key={i} className="cloud-tag tag-neg">{p}</span>
+                   {insights?.top_complaint_phrases?.map((p,i) => (
+                     <motion.span key={i} className="cloud-tag tag-neg" whileHover={{scale:1.08}}>{p}</motion.span>
                    ))}
                  </div>
                </GlassCard>
 
-               {/* Action Tracker (localStorage MVP) */}
+               {/* Action Center */}
                <GlassCard className="action-tracker">
                  <div className="panel-header">
-                   <h3><ListTodo size={18} /> CR Action Center</h3>
-                   <span className="action-badge">{actions.filter(a => !a.completed).length} pending</span>
+                   <h3><ListTodo size={18}/> CR Action Center</h3>
+                   <span className="action-badge">{actions.filter(a=>!a.completed).length} pending</span>
                  </div>
-                 <div className="action-input-grp">
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Schedule staff meeting..." 
-                      value={newActionText}
-                      onChange={(e) => setNewActionText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddAction()}
-                    />
-                    <button onClick={handleAddAction}><PlusCircle size={18} /></button>
+                 <div className="action-input-area">
+                   <div className="action-input-grp">
+                     <input type="text" placeholder="Add an action item..." value={newActionText}
+                       onChange={e=>setNewActionText(e.target.value)}
+                       onKeyDown={e=>e.key==='Enter'&&handleAddAction()}
+                     />
+                     <button onClick={handleAddAction}><PlusCircle size={18}/></button>
+                   </div>
+                   <div className="action-meta-row">
+                     <select className="action-priority-select" value={actionPriority} onChange={e=>setActionPriority(e.target.value)}>
+                       <option value="High">🔴 High</option>
+                       <option value="Medium">🟡 Medium</option>
+                       <option value="Low">🟢 Low</option>
+                     </select>
+                     <select className="action-subject-select" value={actionSubjectTag} onChange={e=>setActionSubjectTag(e.target.value)}>
+                       <option value="">No subject tag</option>
+                       {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+                     </select>
+                   </div>
                  </div>
                  <div className="action-list-mini">
-                    {actions.map(action => (
-                      <div key={action.id} className={`action-item-mini ${action.completed ? 'done' : ''}`}>
-                         <div className="action-chk" onClick={() => toggleAction(action.id)}>
-                            {action.completed ? <CheckCircle2 size={16} /> : <div className="chk-box" />}
+                   <AnimatePresence>
+                     {actions.map(action=>(
+                       <motion.div key={action.id} layout
+                         className={`action-item-mini ${action.completed?'done':''}`}
+                         initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,height:0}}
+                       >
+                         <div className="action-chk" onClick={()=>toggleAction(action.id)}>
+                           {action.completed?<CheckCircle2 size={16}/>:<div className="chk-box"/>}
                          </div>
-                         <span className="action-txt">{action.text}</span>
-                         <button className="action-del" onClick={() => deleteAction(action.id)}><Trash2 size={12} /></button>
-                      </div>
-                    ))}
-                    {actions.length === 0 && <p className="empty-actions">No actions tracked yet. Start organizing your resolutions.</p>}
+                         <div className="action-body">
+                           <span className="action-txt">{action.text}</span>
+                           <div className="action-tags-row">
+                             {action.priority && <span className={`action-priority-tag p-${action.priority?.toLowerCase()}`}>{action.priority}</span>}
+                             {action.subjectTag && <span className="action-subject-tag">{action.subjectTag}</span>}
+                           </div>
+                         </div>
+                         <button className="action-del" onClick={()=>deleteAction(action.id)}><Trash2 size={12}/></button>
+                       </motion.div>
+                     ))}
+                   </AnimatePresence>
+                   {actions.length===0&&<p className="empty-actions">No actions tracked yet. Add your first resolution above.</p>}
                  </div>
                </GlassCard>
             </div>
@@ -1005,6 +1256,38 @@ export default function Dashboard({ theme, toggleTheme }) {
               </div>
             </div>
 
+            <GlassCard className="session-intel-card">
+              <div className="sic-header">
+                <div className="sic-icon"><Zap size={20}/></div>
+                <div>
+                  <h4>Session Intelligence</h4>
+                  <span className="sic-sub">Live analytics for {profile?.department}</span>
+                </div>
+                <span className={`session-status-badge sic-badge ${session?'live':'offline'}`}>
+                  <span className="status-dot"/>{session?'LIVE':'IDLE'}
+                </span>
+              </div>
+              <div className="sic-stats">
+                <div className="sic-stat">
+                  <span className="sic-stat-label">Total Feedback</span>
+                  <span className="sic-stat-val">{feedback.length}</span>
+                </div>
+                <div className="sic-stat">
+                  <span className="sic-stat-label">Positive</span>
+                  <span className="sic-stat-val text-success">{feedback.filter(f=>f.sentiment_label==='Positive').length}</span>
+                </div>
+                <div className="sic-stat">
+                  <span className="sic-stat-label">Negative</span>
+                  <span className="sic-stat-val text-error">{feedback.filter(f=>f.sentiment_label==='Negative').length}</span>
+                </div>
+                <div className="sic-stat">
+                  <span className="sic-stat-label">Satisfaction</span>
+                  <span className="sic-stat-val text-primary">{insights?.satisfaction_score??'--'}%</span>
+                </div>
+              </div>
+              {session && <p className="sic-started"><Clock size={12}/> Session started: {new Date(session.started_at).toLocaleString()}</p>}
+            </GlassCard>
+
             <GlassCard className="session-control-card">
               <div className="session-status-area">
                 <div className={`session-status-badge ${session ? 'live' : 'offline'}`}>
@@ -1089,19 +1372,23 @@ export default function Dashboard({ theme, toggleTheme }) {
           </motion.div>
         )}
 
-        {/* PDF Confirm Modal — Full Report */}
+        {/* PDF Confirm Modal */}
         <AnimatePresence>
           {pdfConfirm?.type === 'full' && (
             <PdfConfirmModal
               title="Export Full Department Report"
               description={`This will generate a multi-page PDF covering all ${subjects.length} subjects, AI insights, and every feedback log for ${profile?.department}.`}
               fileName={`FeedbackPulse_${profile?.department}_Report.pdf`}
-              onConfirm={() => {
-                setPdfConfirm(null);
-                generatePDFReport(profile, insights, feedback, subjects, staff);
-              }}
+              onConfirm={() => { setPdfConfirm(null); generatePDFReport(profile, insights, feedback, subjects, staff); }}
               onCancel={() => setPdfConfirm(null)}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Session End Summary Modal */}
+        <AnimatePresence>
+          {showSessionSummary && sessionEndSummary && (
+            <SessionSummaryModal summary={sessionEndSummary} onClose={()=>setShowSessionSummary(false)} />
           )}
         </AnimatePresence>
       </main>
@@ -1276,6 +1563,35 @@ function PdfConfirmModal({ title, description, fileName, onConfirm, onCancel }) 
             <FileText size={16} /> Yes, Download
           </button>
         </div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
+// ─── SESSION SUMMARY MODAL ────────────────────────────────────────────────────
+function SessionSummaryModal({ summary, onClose }) {
+  const sentColor = summary.dominant === 'Positive' ? 'var(--success)' : summary.dominant === 'Negative' ? 'var(--error)' : 'var(--warning)';
+  return createPortal(
+    <motion.div className="ses-overlay" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
+      <motion.div className="ses-card" initial={{opacity:0,scale:0.9,y:30}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.9,y:30}} transition={{type:'spring',stiffness:320,damping:28}} onClick={e=>e.stopPropagation()}>
+        <div className="ses-header">
+          <div className="ses-icon-ring"><CheckCircle2 size={28} color="var(--success)"/></div>
+          <h3>Session Ended</h3>
+          <p>Here's a summary of your feedback session</p>
+        </div>
+        <div className="ses-stats-grid">
+          <div className="ses-stat"><span className="ses-stat-val">{summary.totalFeedback}</span><span className="ses-stat-label">Total Responses</span></div>
+          <div className="ses-stat"><span className="ses-stat-val text-success">{summary.posCount}</span><span className="ses-stat-label">Positive</span></div>
+          <div className="ses-stat"><span className="ses-stat-val text-error">{summary.negCount}</span><span className="ses-stat-label">Negative</span></div>
+          <div className="ses-stat"><span className="ses-stat-val">{summary.studentCount}</span><span className="ses-stat-label">Students</span></div>
+          <div className="ses-stat"><span className="ses-stat-val">{summary.duration}m</span><span className="ses-stat-label">Duration</span></div>
+          <div className="ses-stat"><span className="ses-stat-val" style={{color:sentColor}}>{summary.dominant}</span><span className="ses-stat-label">Sentiment</span></div>
+        </div>
+        {summary.topComplaint && (
+          <div className="ses-complaint"><AlertCircle size={14}/> Top concern: <em>"{summary.topComplaint}"</em></div>
+        )}
+        <button className="ses-close-btn" onClick={onClose}>Close Summary</button>
       </motion.div>
     </motion.div>,
     document.body
