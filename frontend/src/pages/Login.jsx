@@ -19,6 +19,10 @@ import {
 import { crLogin, crSignup } from '../api';
 import './Login.css';
 
+/* ── Admin Credentials (change these to your real values) ── */
+const ADMIN_EMAIL = 'admin@gmail.com';
+const ADMIN_PASSWORD = 'admin@123';
+
 const YEAR_OPTIONS = [
   { value: '1', label: '1st Year' },
   { value: '2', label: '2nd Year' },
@@ -285,15 +289,15 @@ export default function Login({ role = 'CR' }) {
     const missing = [];
     const errs = {};
 
-    if (!fullName.trim())             { missing.push('Full Name');             errs.fullName = true; }
-    if (!department.trim())           { missing.push('Department');            errs.department = true; }
-    if (!year)                        { missing.push('Year');                  errs.year = true; }
-    if (!email.trim())                { missing.push('Email');                 errs.email = true; }
+    if (!fullName.trim()) { missing.push('Full Name'); errs.fullName = true; }
+    if (!department.trim()) { missing.push('Department'); errs.department = true; }
+    if (!year) { missing.push('Year'); errs.year = true; }
+    if (!email.trim()) { missing.push('Email'); errs.email = true; }
     else if (!EMAIL_RE.test(email.trim())) {
       missing.push('a valid Email address (e.g. you@domain.com)');
       errs.email = true;
     }
-    if (password.length < 6)          {
+    if (password.length < 6) {
       missing.push('Password (min 6 characters)');
       errs.password = true;
     }
@@ -313,19 +317,18 @@ export default function Login({ role = 'CR' }) {
 
     /* ── Admin credential validation ── */
     if (role === 'Admin') {
-      if (!email.trim()) {
-        setError('Administrator email is required.');
-        setFieldErrors({ email: true });
+      if (!email.trim() || !password) {
+        setError('Both email and password are required.');
+        setFieldErrors({ email: !email.trim(), password: !password });
         return;
       }
-      if (!EMAIL_RE.test(email.trim())) {
-        setError('Please enter a valid administrator email address.');
-        setFieldErrors({ email: true });
-        return;
-      }
-      if (!password || password.length < 6) {
-        setError('Password must be at least 6 characters.');
-        setFieldErrors({ password: true });
+      // Exact-match check against stored admin credentials
+      if (
+        email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase() ||
+        password !== ADMIN_PASSWORD
+      ) {
+        setError('Invalid administrator credentials. Access denied.');
+        setFieldErrors({ email: true, password: true });
         return;
       }
     }
@@ -343,8 +346,9 @@ export default function Login({ role = 'CR' }) {
 
     try {
       if (role === 'Admin') {
-        // Simulate secure admin auth (replace with real API when available)
-        await new Promise((r) => setTimeout(r, 900));
+        // Credentials already verified above — simulate network delay then enter
+        await new Promise((r) => setTimeout(r, 750));
+        sessionStorage.setItem('admin_auth', 'true');
         navigate('/admin-master');
         return;
       }
@@ -406,7 +410,7 @@ export default function Login({ role = 'CR' }) {
             {/* Header */}
             <div className="cr-card-header">
               <motion.div
-                className={`cr-logo-badge${role === 'Admin' ? ' cr-logo-badge--admin' : ''}`}
+                className="cr-logo-badge"
                 initial={{ scale: 0, rotate: -20 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.2, type: 'spring', stiffness: 260, damping: 20 }}
@@ -536,7 +540,7 @@ export default function Login({ role = 'CR' }) {
               </AnimatePresence>
 
               {/* Email */}
-              <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22,1,0.36,1] } } }}>
+              <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } }}>
                 <div className={`cr-field ${focusedField === 'email' ? 'focused' : ''} ${isActive(email) ? 'has-value' : ''} ${fieldErrors.email ? 'field-error' : ''}`}>
                   <Mail className="cr-field-icon" size={17} />
                   <input
@@ -555,7 +559,7 @@ export default function Login({ role = 'CR' }) {
               </motion.div>
 
               {/* Password */}
-              <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22,1,0.36,1] } } }}>
+              <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } }}>
                 <div className={`cr-field ${focusedField === 'pass' ? 'focused' : ''} ${isActive(password) ? 'has-value' : ''} ${fieldErrors.password ? 'field-error' : ''}`}>
                   <Lock className="cr-field-icon" size={17} />
                   <input

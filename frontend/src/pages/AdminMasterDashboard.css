@@ -1,99 +1,538 @@
-.admin-wrapper {
-  background: var(--bg-color);
-}
+/* ══════════════════════════════════════════════════════════════
+   ADMIN MASTER DASHBOARD — PREMIUM REDESIGN
+   Matches Login page visual language: dark gradient, glass card,
+   floating orbs, particle canvas, staggered transitions.
+   ══════════════════════════════════════════════════════════════ */
 
-.admin-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-.admin-subtitle {
-  color: var(--text-sub);
-  font-size: 0.875rem;
-  margin-top: -1.5rem;
-}
-
-.table-card {
-  padding: 0;
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-.cr-table {
+/* ── Root ──────────────────────────────────────────────────── */
+.amd-root {
+  position: relative;
   width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  isolation: isolate;
 }
 
-.cr-table th {
-  padding: 1rem 1.5rem;
-  background: rgba(0, 0, 0, 0.02);
-  color: var(--text-sub);
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--glass-border);
+/* ── Background Gradient ───────────────────────────────────── */
+.amd-bg-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 120% 80% at 60% -20%, #312e81 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at -10% 80%, #1e1b4b 0%, transparent 50%),
+    radial-gradient(ellipse 90% 70% at 100% 100%, #4c1d95 0%, transparent 55%),
+    linear-gradient(145deg, #0f0c29 0%, #1a1060 40%, #24243e 100%);
 }
 
-[data-theme='dark'] .cr-table th {
-  background: rgba(255, 255, 255, 0.02);
+/* ── Floating Orbs ─────────────────────────────────────────── */
+.amd-orbs {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.cr-table td {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--glass-border);
-  color: var(--text-main);
-  font-size: 0.875rem;
+.amd-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.16;
+  animation: amdOrbDrift linear infinite;
 }
 
-.cr-table tr:last-child td {
-  border-bottom: none;
+.amd-orb-1 {
+  width: 560px; height: 560px;
+  background: radial-gradient(circle, #818cf8 0%, #4f46e5 100%);
+  top: -15%; left: -10%;
+  animation-duration: 24s;
 }
 
-.cr-table tr:hover td {
-  background: rgba(139, 92, 246, 0.05);
+.amd-orb-2 {
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, #a78bfa 0%, #7c3aed 100%);
+  bottom: -10%; right: -10%;
+  animation-duration: 30s;
+  animation-direction: reverse;
 }
 
-.fw-500 {
-  font-weight: 500;
+.amd-orb-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #60a5fa 0%, #2563eb 100%);
+  top: 45%; left: 55%;
+  transform: translateX(-50%);
+  animation-duration: 19s;
+  opacity: 0.1;
 }
 
-.badge-dept {
-  background: var(--primary-glow);
-  color: var(--primary);
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+@keyframes amdOrbDrift {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(40px, -30px) scale(1.06); }
+  66%  { transform: translate(-25px, 20px) scale(0.96); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
-.actions-cell {
+/* ── Particle Canvas ───────────────────────────────────────── */
+.amd-particle-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.amd-header {
+  position: relative;
+  z-index: 10;
   display: flex;
-  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 68px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: var(--transition);
+.amd-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.amd-header-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 60%, #a855f7 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+  flex-shrink: 0;
 }
 
-.icon-btn.text-muted { color: var(--text-muted); }
-.icon-btn.text-muted:hover { color: var(--primary); }
+.amd-header-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #fff;
+}
 
-.icon-btn.text-error { color: var(--text-muted); }
-.icon-btn.text-error:hover { color: var(--error); }
+.amd-header-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 6px;
+  padding: 0.18rem 0.5rem;
+}
 
-.text-center { text-align: center; }
-.py-4 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+.amd-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.amd-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  color: #c4b5fd;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.amd-signout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.48rem 1rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 9px;
+  color: #fca5a5;
+  font-size: 0.83rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.amd-signout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+/* ── Main / Content ────────────────────────────────────────── */
+.amd-main {
+  position: relative;
+  z-index: 10;
+  padding: 2.5rem 2rem 5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.amd-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* ── Page Heading ──────────────────────────────────────────── */
+.amd-page-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.amd-page-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 60%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow:
+    0 12px 28px rgba(99, 102, 241, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  flex-shrink: 0;
+}
+
+.amd-page-title {
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: #f0f0ff;
+  letter-spacing: -0.5px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.amd-page-sub {
+  font-size: 0.88rem;
+  color: rgba(196, 181, 253, 0.6);
+  margin: 0.2rem 0 0;
+}
+
+/* ── Stats Row ─────────────────────────────────────────────── */
+.amd-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.amd-stat-card {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem 1.4rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.amd-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.amd-stat-card--approved {
+  border-color: rgba(16, 185, 129, 0.22);
+  background: rgba(16, 185, 129, 0.07);
+}
+
+.amd-stat-card--pending {
+  border-color: rgba(245, 158, 11, 0.22);
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.amd-stat-val {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
+.amd-stat-card--approved .amd-stat-val { color: #6ee7b7; }
+.amd-stat-card--pending  .amd-stat-val { color: #fcd34d; }
+
+.amd-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.55);
+}
+
+/* ── Glass Card ────────────────────────────────────────────── */
+.amd-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(203, 213, 225, 0.5);
+  border-radius: 22px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    0 32px 64px -12px rgba(0, 0, 0, 0.4),
+    0 8px 24px -4px rgba(99, 102, 241, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+}
+
+/* ── Card Header ───────────────────────────────────────────── */
+.amd-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.55);
+}
+
+.amd-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  letter-spacing: 0.01em;
+}
+
+.amd-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.48rem 1rem;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+  transition: box-shadow 0.2s ease;
+}
+
+.amd-refresh-btn:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.55);
+}
+
+.amd-refresh-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Table ─────────────────────────────────────────────────── */
+.amd-table-wrap {
+  overflow-x: auto;
+}
+
+.amd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.amd-table thead tr {
+  background: #f8fafc;
+}
+
+.amd-table th {
+  padding: 0.85rem 1.5rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.6);
+}
+
+.amd-row td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.4);
+  vertical-align: middle;
+}
+
+.amd-row:last-child td {
+  border-bottom: none;
+}
+
+.amd-row:hover td {
+  background: rgba(99, 102, 241, 0.03);
+}
+
+/* ── Cell content ──────────────────────────────────────────── */
+.amd-name {
+  font-weight: 700;
+  color: #1e1b4b;
+  font-size: 0.9rem;
+}
+
+.amd-email {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+.amd-dept-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.amd-year {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ── Status Badges ─────────────────────────────────────────── */
+.amd-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.amd-status--approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.amd-status--pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+/* ── Action Buttons ────────────────────────────────────────── */
+.amd-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.amd-action-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.amd-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.amd-action-btn--approve {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.amd-action-btn--approve:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.18);
+}
+
+.amd-action-btn--delete {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+
+.amd-action-btn--delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* ── Loading & Empty States ────────────────────────────────── */
+.amd-td-center {
+  text-align: center;
+  padding: 3rem 1.5rem !important;
+}
+
+.amd-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.amd-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: amdSpin 0.75s linear infinite;
+}
+
+@keyframes amdSpin {
+  to { transform: rotate(360deg); }
+}
+
+.amd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  color: #cbd5e1;
+}
+
+.amd-empty p {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .amd-main { padding: 1.5rem 1rem 4rem; }
+  .amd-header { padding: 0 1rem; }
+  .amd-header-tag,
+  .amd-user-pill { display: none; }
+  .amd-stats { flex-direction: column; }
+  .amd-table th:nth-child(3),
+  .amd-row td:nth-child(3) { display: none; }
+}

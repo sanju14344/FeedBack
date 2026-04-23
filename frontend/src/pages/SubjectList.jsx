@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
-import { getSubjects, getSubmittedSubjects, getStaff } from '../api';
+import { getSubjects, getSubmittedSubjects, getStaff, getSessionStatus } from '../api';
 import { 
   BookOpen, 
   User, 
@@ -34,9 +34,15 @@ export default function SubjectList({ theme, toggleTheme }) {
     Promise.all([
       getSubjects(deptId),
       getSubmittedSubjects(studentUid, deptId),
-      getStaff(deptId)
+      getStaff(deptId),
+      getSessionStatus(deptId)
     ])
-      .then(([subjRes, submittedRes, staffRes]) => {
+      .then(([subjRes, submittedRes, staffRes, sessionRes]) => {
+        if (!sessionRes.data || !sessionRes.data.is_active) {
+          navigate('/student', { replace: true });
+          return;
+        }
+
         const staffList = staffRes.data || [];
         const enrichedSubjects = (subjRes.data || []).map(subject => {
           const assignedStaff = staffList.find(s => s.subject_id === subject.id);

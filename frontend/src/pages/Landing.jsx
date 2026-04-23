@@ -25,8 +25,17 @@ import {
   PenTool,
   Lightbulb,
   Camera,
-  Heart
+  Heart,
+  ChevronRight,
+  ArrowRight,
+  UserPlus,
+  MousePointer2,
+  PieChart,
+  Zap,
+  Lock,
+  ThumbsUp
 } from 'lucide-react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 
 /* ─── SVG Cartoon Characters (transparent, inline) ─── */
 
@@ -193,19 +202,38 @@ function SvgSitter() {
   );
 }
 
-const features = [
-  { icon: <BarChart2 size={24} />, title: 'Real-Time Analytics', desc: 'Instantly visualize feedback trends and class performance over time.', color: '#7c3aed' },
-  { icon: <Brain size={24} />, title: 'AI Sentiment Analysis', desc: 'Automatically classify student sentiment — positive, neutral, or negative.', color: '#06b6d4' },
-  { icon: <FileText size={24} />, title: 'PDF Reports', desc: 'Export beautifully formatted analytical reports with a single click.', color: '#10b981' },
-  { icon: <FolderTree size={24} />, title: 'Class Directory', desc: 'Manage your subjects, staff, and assignments in a clean hierarchy.', color: '#f59e0b' },
-  { icon: <ShieldCheck size={24} />, title: 'Anonymous Feedback', desc: 'Students submit honest feedback without fear — privacy first.', color: '#ef4444' },
-  { icon: <GraduationCap size={24} />, title: 'Multi-Year Support', desc: 'Works across all years and departments within a single institution.', color: '#a855f7' },
+const whyFeatures = [
+  { 
+    icon: <ShieldCheck size={28} />, 
+    title: 'Anonymous Feedback', 
+    desc: 'Students share honest opinions without hesitation, ensuring complete privacy and safety.', 
+    color: '#7c3aed' 
+  },
+  { 
+    icon: <Zap size={28} />, 
+    title: 'Real-time Insights', 
+    desc: 'Instantly visualize class performance and staff scores as soon as feedback is submitted.', 
+    color: '#06b6d4' 
+  },
+  { 
+    icon: <Brain size={28} />, 
+    title: 'AI Analysis', 
+    desc: 'Our advanced NLP models categorize sentiment and identify key teaching trends automatically.', 
+    color: '#10b981' 
+  },
+  { 
+    icon: <MousePointer2 size={28} />, 
+    title: 'Easy to Use', 
+    desc: 'Simple, mobile-first interface designed for both busy students and administrators.', 
+    color: '#f59e0b' 
+  },
 ];
 
-const steps = [
-  { num: '01', title: 'CR Registers', desc: 'Class Representatives create an account and set up their department directory.' },
-  { num: '02', title: 'Students Submit', desc: 'Students scan or visit a link to submit anonymous staff feedback in seconds.' },
-  { num: '03', title: 'Insights Surface', desc: 'The CR dashboard instantly reflects AI-analyzed sentiment, scores, and trends.' },
+const roadmapSteps = [
+  { id: 1, icon: <UserPlus />, title: 'Login', desc: 'Securely authenticate via your institution portal to access the workspace.' },
+  { id: 2, icon: <Library />, title: 'Select Subject', desc: 'Pick the subject and faculty member you want to share feedback on.' },
+  { id: 3, icon: <MessageSquare />, title: 'Submit Feedback', desc: 'Answer a few short questions anonymously to share your perspective.' },
+  { id: 4, icon: <PieChart />, title: 'View Insights', desc: 'Administrators get detailed AI-powered reports of the feedback patterns.' },
 ];
 
 const stats = [
@@ -214,6 +242,7 @@ const stats = [
   { value: '98%', label: 'Satisfaction Rate' },
   { value: '50+', label: 'Institutions' },
 ];
+
 
 export default function Landing({ theme, toggleTheme }) {
   const navigate = useNavigate();
@@ -371,91 +400,282 @@ export default function Landing({ theme, toggleTheme }) {
         </div>
       </section>
 
-      {/* ── FEATURES BENTO ── */}
-      <section id="features" className="features-section">
-        <div className="float-card scroll-animate sa-right fc-user-dash">
-          <div className="fc-header">CR Dashboard</div>
-          <div className="fc-stat-row"><span>Total Feedbacks</span><strong>1,204</strong></div>
-          <div className="fc-stat-row"><span>Avg Score</span><strong style={{color: '#10b981'}}>4.8 / 5</strong></div>
-          <div className="fc-chart">
-            <div className="fc-bar" style={{height: '40%'}}></div>
-            <div className="fc-bar" style={{height: '70%', backgroundColor: 'var(--primary)'}}></div>
-            <div className="fc-bar" style={{height: '100%', backgroundColor: 'var(--primary)'}}></div>
-            <div className="fc-bar" style={{height: '60%'}}></div>
-          </div>
-        </div>
+      {/* ── SECTION 1: WHY THIS PLATFORM? ── */}
+      <section className="lp-section why-section">
+        <div className="lp-container">
+          <motion.div 
+            className="lp-header"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <span className="lp-label">Value Proposition</span>
+            <h2 className="lp-title">Why FeedbackPulse?</h2>
+            <p className="lp-desc">The ultimate bridge between students and academic excellence.</p>
+          </motion.div>
 
-        <div className="section-label">Features</div>
-        <h2 className="section-title">Everything you need in one place</h2>
-        <p className="section-sub">From collection to analysis, FeedbackPulse handles the entire workflow.</p>
-
-        <div className="features-marquee-wrapper">
-          <div className="features-bento">
-            {[...features, ...features].map((f, i) => (
-              <div key={i} className="feature-card" style={{ '--card-color': f.color }}>
-                <div className="feature-icon" style={{ background: `${f.color}18`, color: f.color }}>{f.icon}</div>
-                <h3 className="feature-title">{f.title}</h3>
-                <p className="feature-desc">{f.desc}</p>
-                <div className="feature-glow" style={{ background: `${f.color}20` }} />
-              </div>
+          <div className="why-grid">
+            {whyFeatures.map((f, i) => (
+              <motion.div 
+                key={i} 
+                className="why-card"
+                initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6, delay: i * 0.1, ease: "easeOut" }}
+                whileHover={{ y: -10, boxShadow: '0 20px 40px var(--glass-shadow-dark)' }}
+              >
+                <div className="why-icon" style={{ background: `${f.color}15`, color: f.color }}>{f.icon}</div>
+                <h3 className="why-card-title">{f.title}</h3>
+                <p className="why-card-desc">{f.desc}</p>
+                <div className="why-card-glow" style={{ background: f.color }} />
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="how-section">
-        <div className="float-card scroll-animate sa-left fc-signup">
-          <div className="fc-header">Create CR Account</div>
-          <div className="fc-input">mail@college.edu</div>
-          <div className="fc-input">••••••••</div>
-          <div className="fc-btn">Register Workspace</div>
-        </div>
+      {/* ── SECTION 2: HOW IT WORKS ── */}
+      <section className="lp-section how-roadmap-section">
+        <div className="lp-container">
+          <motion.div 
+            className="lp-header"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <span className="lp-label">Workflow</span>
+            <h2 className="lp-title">Seamless 4-Step Process</h2>
+          </motion.div>
 
-        <div className="section-label">Process</div>
-        <h2 className="section-title">How it works</h2>
-        <div className="steps-row">
-          {steps.map((s, i) => (
-            <div key={i} className="step-card">
-              <div className="step-num">{s.num}</div>
-              <h3 className="step-title">{s.title}</h3>
-              <p className="step-desc">{s.desc}</p>
-              {i < steps.length - 1 && <div className="step-arrow">→</div>}
+          <div className="roadmap-container">
+            <div className="roadmap-line" />
+            <div className="roadmap-steps">
+              {roadmapSteps.map((s, i) => (
+                <motion.div 
+                  key={s.id} 
+                  className="roadmap-step"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.15 }}
+                >
+                  <div className="roadmap-node">
+                    <div className="node-outer">
+                      <div className="node-inner">{s.icon}</div>
+                    </div>
+                  </div>
+                  <div className="roadmap-content">
+                    <h3 className="roadmap-step-title">{s.title}</h3>
+                    <p className="roadmap-step-desc">{s.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      {/* ── STATS BANNER ── */}
-      <section className="stats-section">
-        {stats.map(s => (
-          <div key={s.label} className="stat-block">
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-label">{s.label}</div>
-          </div>
-        ))}
-      </section>
 
-      {/* ── CTA BANNER ── */}
-      <section className="cta-banner">
-        <div className="float-card scroll-animate sa-bottom fc-feedback">
-          <div className="fc-header">Rate your experience</div>
-          <div className="fc-stars">
-            <Star size={16} fill="var(--primary)" color="var(--primary)" />
-            <Star size={16} fill="var(--primary)" color="var(--primary)" />
-            <Star size={16} fill="var(--primary)" color="var(--primary)" />
-            <Star size={16} fill="var(--primary)" color="var(--primary)" />
-            <Star size={16} fill="var(--primary)" color="var(--primary)" />
+      {/* ── SECTION 3: KEY FEATURES ── */}
+      <section className="kf-section">
+        <div className="lp-container">
+          <div className="kf-item">
+            <motion.div 
+              className="kf-text"
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+            >
+              <span className="kf-tag">Analytics</span>
+              <h2 className="kf-title">Deep Insights into Class Performance</h2>
+              <p className="kf-desc">Our AI-driven dashboard doesn't just show numbers; it tells you exactly where the friction points are in your department.</p>
+              <ul className="kf-points">
+                <li className="kf-point"><div className="kf-point-check"><Check size={14} /></div> Weekly Sentiment Trends</li>
+                <li className="kf-point"><div className="kf-point-check"><Check size={14} /></div> Faculty Performance Matrix</li>
+                <li className="kf-point"><div className="kf-point-check"><Check size={14} /></div> Automated PDF Reporting</li>
+              </ul>
+            </motion.div>
+            <motion.div 
+              className="kf-visual"
+              initial={{ opacity: 0, x: 50, rotate: 5 }}
+              whileInView={{ opacity: 1, x: 0, rotate: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="kf-mockup-frame">
+                <div className="kf-mockup-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', padding: '2rem' }}>
+                  <BarChart2 size={120} color="var(--primary)" strokeWidth={1} />
+                </div>
+              </div>
+            </motion.div>
           </div>
-          <div className="fc-input large">I really liked the methodology...</div>
-          <div className="fc-btn small">Submit Anonymous</div>
+
+          <div className="kf-item reverse">
+            <motion.div 
+              className="kf-text"
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+            >
+              <span className="kf-tag">Privacy</span>
+              <h2 className="kf-title">Students Speak Without Fear</h2>
+              <p className="kf-desc">Honesty is the key to improvement. We ensure every single feedback entry is untraceable, encouraging students to be 100% candid.</p>
+              <ul className="kf-points">
+                <li className="kf-point"><div className="kf-point-check"><Check size={14} /></div> Zero-Log Authentication</li>
+                <li className="kf-point"><div className="kf-point-check"><Check size={14} /></div> Encrypted Data Streams</li>
+                <li className="kf-point"><div className="kf-point-check"><Check size={14} /></div> Trust-Centered Design</li>
+              </ul>
+            </motion.div>
+            <motion.div 
+              className="kf-visual"
+              initial={{ opacity: 0, x: -50, rotate: -5 }}
+              whileInView={{ opacity: 1, x: 0, rotate: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="kf-mockup-frame">
+                <div className="kf-mockup-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', padding: '2.5rem' }}>
+                  <Lock size={120} color="var(--accent)" strokeWidth={1} />
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
-
-        <div className="cta-banner-orb" />
-        <h2 className="cta-banner-title">Ready to transform your department?</h2>
-        <p className="cta-banner-sub">Join thousands of CRs already using FeedbackPulse.</p>
-        <button className="cta-primary large" style={{position: 'relative', zIndex: 1}} onClick={() => navigate('/auth')}>Get Start →</button>
       </section>
+
+      {/* ── SECTION 4: INTERACTIVE DEMO ── */}
+      <section className="lp-section demo-section">
+        <div className="lp-container">
+          <motion.div 
+            className="lp-header"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <span className="lp-label">Experience</span>
+            <h2 className="lp-title">Live Preview</h2>
+            <p className="lp-desc">Interact with our sleek, intuitive components right now.</p>
+          </motion.div>
+
+          <div className="demo-grid">
+            {/* Mock Feedback Form */}
+            <motion.div 
+              className="demo-card"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <h3 className="demo-card-title"><PenTool size={20} /> Student Feedback</h3>
+              <div className="mini-feedback-form">
+                <div className="mf-input-group">
+                  <label className="mf-label">Select Faculty</label>
+                  <div className="mf-input">Dr. Sarah Jenkins (OS)</div>
+                </div>
+                <div className="mf-input-group">
+                  <label className="mf-label">Rating</label>
+                  <div className="mf-rating">
+                    {[1,2,3,4,5].map(v => <Star key={v} size={20} className={`mf-star ${v <= 4 ? 'active' : ''}`} fill={v <= 4 ? "#f59e0b" : "none"} />)}
+                  </div>
+                </div>
+                <div className="mf-input-group">
+                  <label className="mf-label">Comments</label>
+                  <div className="mf-input" style={{ height: '60px' }}>Excellent teaching methodology...</div>
+                </div>
+                <button className="mf-submit">Submit Anonymously</button>
+              </div>
+            </motion.div>
+
+            {/* Mock Dashboard Preview */}
+            <motion.div 
+              className="demo-card"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+            >
+              <h3 className="demo-card-title"><LayoutGrid size={20} /> CR Analytics</h3>
+              <div className="mini-dash">
+                <div className="md-stat-rows">
+                  <div className="md-stat-box">
+                    <div className="md-stat-val">1.2k</div>
+                    <div className="md-stat-label">Feedbacks</div>
+                  </div>
+                  <div className="md-stat-box">
+                    <div className="md-stat-val">4.8</div>
+                    <div className="md-stat-label">Avg Rating</div>
+                  </div>
+                </div>
+                <div className="md-chart-sim">
+                  <div className="md-chart-bar" style={{ height: '60%' }} />
+                  <div className="md-chart-bar" style={{ height: '100%', background: 'var(--primary)' }} />
+                  <div className="md-chart-bar" style={{ height: '80%', background: 'var(--accent)' }} />
+                  <div className="md-chart-bar" style={{ height: '40%' }} />
+                </div>
+                <button className="mf-submit" style={{ background: 'var(--bg-elevated)', color: 'var(--primary)', border: '1px solid var(--glass-border)' }}>View Full Report</button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION 5: TRUST & BENEFITS ── */}
+      <section className="lp-section trust-section">
+        <div className="lp-container">
+          <div className="trust-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '3rem' }}>
+            <motion.div 
+              className="trust-item" style={{ textAlign: 'center' }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <div style={{ color: 'var(--primary)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}><ShieldCheck size={48} /></div>
+              <h3 style={{ marginBottom: '1rem', fontWeight: 800 }}>Secure & Anonymous</h3>
+              <p style={{ color: 'var(--text-sub)' }}>End-to-end encryption ensures that your identity remains a secret forever.</p>
+            </motion.div>
+            <motion.div 
+              className="trust-item" style={{ textAlign: 'center' }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <div style={{ color: 'var(--accent)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}><Zap size={48} /></div>
+              <h3 style={{ marginBottom: '1rem', fontWeight: 800 }}>Fast & Simple</h3>
+              <p style={{ color: 'var(--text-sub)' }}>The quickest way to collect feedback. No complex setup, no training needed.</p>
+            </motion.div>
+            <motion.div 
+              className="trust-item" style={{ textAlign: 'center' }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <div style={{ color: 'var(--success)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}><PieChart size={48} /></div>
+              <h3 style={{ marginBottom: '1rem', fontWeight: 800 }}>Data-Driven Insights</h3>
+              <p style={{ color: 'var(--text-sub)' }}>Turn feedback into actionable data points to drive real departmental change.</p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ── SECTION 6: CTA ── */}
+      <section className="lp-section final-cta-section" style={{ background: 'var(--bg-elevated)', borderTop: '1px solid var(--glass-border)' }}>
+        <div className="lp-container" style={{ textAlign: 'center' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+          >
+             <h2 className="lp-title" style={{ marginBottom: '2rem' }}>Start Sharing Your <span className="gradient-text">Feedback</span> Today</h2>
+             <motion.button 
+               className="cta-primary large"
+               whileHover={{ scale: 1.05, gap: '1rem' }}
+               whileTap={{ scale: 0.95 }}
+               onClick={() => navigate('/auth')}
+             >
+               Start Your Journey <ArrowRight size={20} />
+             </motion.button>
+             <p style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Join 500+ CRs already transforming their colleges.</p>
+          </motion.div>
+        </div>
+      </section>
+
 
       {/* ── FOOTER ── */}
       <footer className="landing-footer">

@@ -31,4 +31,10 @@ export const createSubject = (data) => api.post('/admin/subjects', data);
 export const updateSubject = (id, data) => api.put(`/admin/subjects/${id}`, data);
 export const deleteSubject = (id) => api.delete(`/admin/subjects/${id}`);
 
+// Session Control
+export const startSession  = (data) => api.post('/admin/session/start', data);
+export const endSession    = (data) => api.post('/admin/session/end', data);
+export const getSessionStatus = (deptId) => api.get(`/session-status?dept_id=${deptId}`);
+export const getSessionHistory = (deptId) => api.get(`/admin/session/history?dept_id=${deptId}`);
+
 export default api;

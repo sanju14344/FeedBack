@@ -16,7 +16,7 @@ import {
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
-import { getDepartmentsByYear } from '../api';
+import { getDepartmentsByYear, getSessionStatus } from '../api';
 import { supabase } from '../supabaseClient';
 import './Onboarding.css';
 import './StudentSelect.css';
@@ -34,6 +34,8 @@ export default function StudentSelect({ theme, toggleTheme }) {
   const [error, setError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [sessionCheckLoading, setSessionCheckLoading] = useState(false);
 
   // Enforce authentication
   useEffect(() => {
@@ -70,15 +72,50 @@ export default function StudentSelect({ theme, toggleTheme }) {
     setShowConfirm(true);
   };
 
-  const confirmSelection = () => {
-    sessionStorage.setItem('student_year', selectedYear);
-    sessionStorage.setItem('student_dept', selectedDept);
-    const dept = departments.find(d => d.id === selectedDept);
-    sessionStorage.setItem('student_dept_name', dept?.name || '');
-    navigate('/student/subjects');
+  const confirmSelection = async () => {
+    setSessionCheckLoading(true);
+    try {
+      const res = await getSessionStatus(selectedDept);
+      if (!res.data || !res.data.is_active) {
+        setSessionEnded(true);
+        setShowConfirm(false);
+        return;
+      }
+      // Session is active, proceed
+      sessionStorage.setItem('student_year', selectedYear);
+      sessionStorage.setItem('student_dept', selectedDept);
+      const dept = departments.find(d => d.id === selectedDept);
+      sessionStorage.setItem('student_dept_name', dept?.name || '');
+      navigate('/student/subjects');
+    } catch (err) {
+      setError('Failed to verify session status.');
+      setShowConfirm(false);
+    } finally {
+      setSessionCheckLoading(false);
+    }
   };
 
   if (isCheckingAuth) return null;
+
+  if (sessionEnded) {
+    return (
+      <div className="onboarding-page session-ended-page">
+        <GlassCard className="session-ended-card">
+          <div className="lock-icon-wrapper">
+            <ShieldAlert size={48} strokeWidth={1.5} />
+          </div>
+          <h1 className="se-title">Session Closed</h1>
+          <p className="se-desc">
+            The feedback session for your department has been ended by the Class Representative. 
+            You can no longer submit responses.
+          </p>
+          <Button variant="primary" onClick={() => navigate('/auth')} style={{ marginTop: '2rem' }}>
+            Return to Login
+          </Button>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
     <div className="onboarding-page">
@@ -239,8 +276,8 @@ export default function StudentSelect({ theme, toggleTheme }) {
             </div>
 
             <div className="modal-actions-premium">
-              <Button variant="primary" className="btn-modal-confirm" onClick={confirmSelection}>
-                Confirm & Proceed
+              <Button variant="primary" className="btn-modal-confirm" onClick={confirmSelection} disabled={sessionCheckLoading}>
+                {sessionCheckLoading ? 'Verifying Session...' : 'Confirm & Proceed'}
               </Button>
             </div>
           </GlassCard>
