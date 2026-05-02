@@ -9,10 +9,16 @@ exports.getDepartments = async (req, res) => {
 
 exports.getSubjects = async (req, res) => {
   const { dept_id } = req.params;
-  const { data, error } = await supabase.from('subjects').select('*').eq('department_id', dept_id).order('name');
+  const { year } = req.query;
+  let query = supabase.from('subjects').select('*').eq('department_id', dept_id);
+  if (year) {
+    query = query.eq('year', year);
+  }
+  const { data, error } = await query.order('name');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 };
+
 
 exports.getStaff = async (req, res) => {
   const { dept_id } = req.params;
@@ -44,9 +50,25 @@ exports.submitFeedback = async (req, res) => {
   if (!student_uid || !subject_id) return res.status(400).json({ error: "Missing required fields" });
 
   try {
+    // 1. Find department_id for this subject
+    const { data: subjectInfo } = await supabase.from('subjects').select('department_id').eq('id', subject_id).single();
+    if (!subjectInfo) return res.status(400).json({ error: "Invalid subject" });
+
+    // 2. Find active session for this department
+    const { data: activeSession } = await supabase.from('feedback_sessions')
+      .select('id')
+      .eq('dept_id', subjectInfo.department_id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!activeSession) return res.status(403).json({ error: "No active session for this department" });
+
+    // 3. Check for duplicates in the current session
     const { data: dup } = await supabase.from('feedback').select('id')
-      .eq('student_uid', student_uid).eq('subject_id', subject_id);
-    if (dup && dup.length > 0) return res.status(409).json({ error: "Already submitted" });
+      .eq('student_uid', student_uid)
+      .eq('subject_id', subject_id)
+      .eq('session_id', activeSession.id);
+    if (dup && dup.length > 0) return res.status(409).json({ error: "Already submitted for this session" });
 
     // Build feedback string and values
     const questions = [
@@ -79,7 +101,8 @@ exports.submitFeedback = async (req, res) => {
       sentiment_label: aiResult.label,
       sentiment_score: aiResult.score,
       q1: starValues[0], q2: starValues[1], q3: starValues[2],
-      q4: starValues[3], q5: starValues[4], q6: starValues[5]
+      q4: starValues[3], q5: starValues[4], q6: starValues[5],
+      session_id: activeSession.id
     };
 
     const { data, error } = await supabase.from('feedback').insert(entry).select();
@@ -95,15 +118,25 @@ exports.getSubmittedSubjects = async (req, res) => {
   const { student_uid, dept_id } = req.query;
   if (!student_uid || !dept_id) return res.status(400).json({ error: 'Missing student_uid or dept_id' });
   try {
-    // Get all subject IDs for this department
+    // 1. Get active session for this department
+    const { data: activeSession } = await supabase.from('feedback_sessions')
+      .select('id')
+      .eq('dept_id', dept_id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!activeSession) return res.json([]); // No active session means no feedback to show for current session
+
+    // 2. Get all subject IDs for this department
     const { data: subjects } = await supabase.from('subjects').select('id').eq('department_id', dept_id);
     const subjectIds = (subjects || []).map(s => s.id);
     if (subjectIds.length === 0) return res.json([]);
 
-    // Get feedback rows for this student in those subjects
+    // 3. Get feedback rows for this student in those subjects FOR THE ACTIVE SESSION
     const { data: fb } = await supabase.from('feedback')
       .select('subject_id')
       .eq('student_uid', student_uid)
+      .eq('session_id', activeSession.id)
       .in('subject_id', subjectIds);
     res.json((fb || []).map(f => f.subject_id));
   } catch (e) {

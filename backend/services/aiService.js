@@ -84,7 +84,11 @@ Analyze ALL feedback and produce a JSON response with exactly these keys:
   "areas_for_improvement": ["<area 1>", "<area 2>", "<area 3>"],
   "suggestions": ["<actionable suggestion for teacher 1>", "<suggestion 2>"],
   "top_compliments": ["<phrase>", "<phrase>"],
-  "top_complaints": ["<phrase>", "<phrase>"]
+  "top_complaints": ["<phrase>", "<phrase>"],
+  "detected_issues": [
+    { "issue": "<specific issue detected>", "priority": "High" | "Medium" | "Low" }
+  ],
+  "trend_story": "<1-2 sentence narrative explaining recent sentiment or performance>"
 }
 
 Feedback entries:
@@ -108,9 +112,15 @@ ${feedbackDump}`;
     const avg = scores.reduce((a, b) => a + b, 0) / (scores.length || 1);
     const satisfaction = Math.round(((avg + 1) / 2) * 100);
 
+    let health_status = "Moderate";
+    if (satisfaction >= 75) health_status = "Good";
+    else if (satisfaction < 50) health_status = "Critical";
+
     return {
       ai_powered: true,
       satisfaction_score: satisfaction,
+      class_health_score: satisfaction,
+      health_status: health_status,
       raw_avg_score: avg,
       count: feedbackList.length,
       ai_summary: result.summary,
@@ -119,7 +129,9 @@ ${feedbackDump}`;
       ai_suggestions: result.suggestions || [],
       ai_overall: result.overall_sentiment || "Neutral",
       top_compliment_phrases: result.top_compliments || [],
-      top_complaint_phrases: result.top_complaints || []
+      top_complaint_phrases: result.top_complaints || [],
+      detected_issues: result.detected_issues || [],
+      trend_story: result.trend_story || "Not enough data for trend analysis."
     };
   } catch (err) {
     console.error("OpenAI class insights failed as expected during fallback:", err.message);
@@ -139,6 +151,8 @@ ${feedbackDump}`;
     return {
       ai_powered: false,
       satisfaction_score: Math.round(((avg + 1) / 2) * 100),
+      class_health_score: Math.round(((avg + 1) / 2) * 100),
+      health_status: overall === "Positive" ? "Good" : overall === "Negative" ? "Critical" : "Moderate",
       raw_avg_score: avg,
       count: feedbackList.length,
       ai_summary: summaryText,
@@ -147,7 +161,41 @@ ${feedbackDump}`;
       ai_suggestions: ["Review raw feedback for nuanced context", "Maintain open channels for anonymous suggestions"],
       ai_overall: overall,
       top_compliment_phrases: ["Teacher explains clearly", "Finishes syllabus on time"],
-      top_complaint_phrases: ["Need more practicals", "Late bloomers need care"]
+      top_complaint_phrases: ["Need more practicals", "Late bloomers need care"],
+      detected_issues: overall === "Negative" ? [{ issue: "General dissatisfaction with recent topics", priority: "High" }] : [],
+      trend_story: "AI insights are currently unavailable due to API limits. Fallback analysis active."
     };
+  }
+};
+
+exports.chatWithAssistant = async (message, feedbackContext) => {
+  if (!openai) {
+    return { response: "OpenAI is not configured. I am unable to answer your query right now." };
+  }
+
+  const limitedContext = feedbackContext.slice(0, 50).map(f => `[${f.subjects?.name || 'Subject'}] ${f.feedback_text}`).join('\n');
+  
+  const prompt = `You are an AI assistant for a Class Representative. 
+You are analyzing the following recent student feedback data:
+${limitedContext}
+
+The CR is asking you a question. Answer concisely, intelligently, and proactively based on the feedback provided.
+CR Query: ${message}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a highly intelligent and helpful AI assistant for educational data analysis. Be concise and actionable." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.5,
+      max_tokens: 300
+    });
+
+    return { response: response.choices[0].message.content };
+  } catch (err) {
+    console.error("AI Chat failed:", err.message);
+    return { response: "I encountered an error analyzing the feedback. Please try again later." };
   }
 };

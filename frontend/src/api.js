@@ -15,8 +15,9 @@ export const submitFeedback = (data) => api.post('/submit-feedback', data);
 export const crSignup = (data) => api.post('/auth/cr-signup', data); // Uses new real signup
 export const crLogin = (data) => api.post('/auth/cr-login', data);
 export const getCrProfile = (uid) => api.get(`/auth/cr-profile?uid=${uid}`);
-export const getInsights = (dept) => api.get(`/admin/insights?dept=${dept}`);
-export const getFeedbackLogs = (dept) => api.get(`/admin/feedback?dept=${dept}`);
+export const getInsights = (dept, sessionId = '') => api.get(`/admin/insights?dept=${dept}${sessionId ? `&session_id=${sessionId}` : ''}`);
+export const getFeedbackLogs = (dept, sessionId = '') => api.get(`/admin/feedback?dept=${dept}${sessionId ? `&session_id=${sessionId}` : ''}`);
+export const sendChatQuery = (dept, sessionId, message) => api.post(`/admin/chat`, { dept, session_id: sessionId, message });
 export const getSubmittedSubjects = (studentUid, deptId) =>
   api.get(`/submitted-subjects?student_uid=${studentUid}&dept_id=${deptId}`);
 export const getCRs = () => api.get('/admin/crs');

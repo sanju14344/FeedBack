@@ -1,8 +1,8 @@
 const { supabase } = require('../utils/supabaseClient');
-const { generateClassInsights } = require('../services/aiService');
+const { generateClassInsights, chatWithAssistant } = require('../services/aiService');
 
 exports.getFeedback = async (req, res) => {
-  const { dept } = req.query;
+  const { dept, session_id } = req.query;
   try {
     let query = supabase.from('feedback').select('*, subjects(name), staff(name)').order('created_at', { ascending: false });
 
@@ -17,6 +17,10 @@ exports.getFeedback = async (req, res) => {
       
       query = query.in('subject_id', subjectIds);
     }
+
+    if (session_id) {
+      query = query.eq('session_id', session_id);
+    }
     
     const { data, error } = await query;
     if (error) throw error;
@@ -27,7 +31,7 @@ exports.getFeedback = async (req, res) => {
 };
 
 exports.getInsights = async (req, res) => {
-  const { dept } = req.query;
+  const { dept, session_id } = req.query;
   try {
     let query = supabase.from('feedback').select('*');
     if (dept) {
@@ -39,6 +43,10 @@ exports.getInsights = async (req, res) => {
           query = query.in('subject_id', subjIds);
         }
       }
+    }
+
+    if (session_id) {
+      query = query.eq('session_id', session_id);
     }
     
     const { data: feedbackData, error } = await query;
@@ -77,10 +85,14 @@ exports.rejectCR = async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: "id required" });
   try {
+    // Nullify references in feedback_sessions to prevent foreign key constraint violations
+    await supabase.from('feedback_sessions').update({ cr_id: null }).eq('cr_id', id);
+
     const { error } = await supabase.from('cr_profiles').delete().eq('id', id);
     if (error) throw error;
     res.json({ message: "CR rejected and deleted successfully" });
   } catch (error) {
+    console.error("Error in rejectCR:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -152,6 +164,38 @@ exports.updateSubject = async (req, res) => {
     const { data, error } = await supabase.from('subjects').update({ name }).eq('id', id).select();
     if (error) throw error;
     res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.chat = async (req, res) => {
+  const { dept, session_id, message } = req.body;
+  if (!message) return res.status(400).json({ error: "Message is required" });
+
+  try {
+    let query = supabase.from('feedback').select('*, subjects(name)').order('created_at', { ascending: false }).limit(200);
+
+    if (dept) {
+      const { data: deptData } = await supabase.from('departments').select('id').eq('name', dept);
+      if (deptData && deptData.length > 0) {
+        const { data: subjData } = await supabase.from('subjects').select('id').eq('department_id', deptData[0].id);
+        const subjIds = (subjData || []).map(s => s.id);
+        if (subjIds.length > 0) {
+          query = query.in('subject_id', subjIds);
+        }
+      }
+    }
+
+    if (session_id) {
+      query = query.eq('session_id', session_id);
+    }
+
+    const { data: feedbackData, error } = await query;
+    if (error) throw error;
+
+    const chatResponse = await chatWithAssistant(message, feedbackData || []);
+    res.json(chatResponse);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

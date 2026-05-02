@@ -20,8 +20,8 @@ import { crLogin, crSignup } from '../api';
 import './Login.css';
 
 /* ── Admin Credentials (change these to your real values) ── */
-const ADMIN_EMAIL = 'admin@gmail.com';
-const ADMIN_PASSWORD = 'admin@123';
+const ADMIN_EMAIL = 'admin@example.com';
+const ADMIN_PASSWORD = 'password';
 
 const YEAR_OPTIONS = [
   { value: '1', label: '1st Year' },

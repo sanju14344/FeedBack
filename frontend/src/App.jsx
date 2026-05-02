@@ -11,17 +11,25 @@ import SubjectList from './pages/SubjectList';
 import FeedbackForm from './pages/FeedbackForm';
 import './index.css';
 
-// Transition configuration for "Soft Fade & Zoom"
-const pageVariants = {
-  initial: { opacity: 0, scale: 0.98, filter: 'blur(4px)' },
-  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
-  exit: { opacity: 0, scale: 1.02, filter: 'blur(4px)' }
-};
+// Detect mobile once at module level (no re-render needed for transition config)
+const _isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
 
-const pageTransition = {
-  duration: 0.5,
-  ease: [0.22, 1, 0.36, 1] // Custom quintic ease
-};
+// Transition configuration
+const pageVariants = _isMobileDevice
+  ? {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit:    { opacity: 0 },
+    }
+  : {
+      initial: { opacity: 0, scale: 0.98, filter: 'blur(4px)' },
+      animate: { opacity: 1, scale: 1,    filter: 'blur(0px)' },
+      exit:    { opacity: 0, scale: 1.02, filter: 'blur(4px)' },
+    };
+
+const pageTransition = _isMobileDevice
+  ? { duration: 0.2 }
+  : { duration: 0.5, ease: [0.22, 1, 0.36, 1] };
 
 const AnimatedRoutes = ({ theme, toggleTheme }) => {
   const location = useLocation();

@@ -123,7 +123,10 @@ export default function AdminMasterDashboard() {
     try {
       await approveCR(id);
       await fetchCRs();
-    } catch { /* silently handle */ }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to approve CR. Please check the console or server logs.');
+    }
     setActionId(null);
   };
 
@@ -133,7 +136,10 @@ export default function AdminMasterDashboard() {
     try {
       await rejectCR(id);
       await fetchCRs();
-    } catch { /* silently handle */ }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to remove CR. Please check the console or server logs.');
+    }
     setActionId(null);
   };
 

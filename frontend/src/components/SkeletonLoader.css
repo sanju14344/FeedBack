@@ -1,0 +1,168 @@
+/* ─── SKELETON LOADER ─── */
+.sk-root {
+  border-radius: 16px;
+  background: var(--bg-surface, rgba(255,255,255,0.03));
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+/* Shimmer animation */
+@keyframes sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.sk-root > *,
+.sk-root * {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* Generic line */
+.sk-line {
+  height: 13px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+.sk-mb0  { margin-bottom: 0; }
+.sk-mb4  { margin-bottom: 4px; }
+.sk-mb8  { margin-bottom: 8px; }
+.sk-mb12 { margin-bottom: 12px; }
+.sk-w15  { width: 15%; }
+.sk-w30  { width: 30%; }
+.sk-w40  { width: 40%; }
+.sk-w50  { width: 50%; }
+.sk-w60  { width: 60%; }
+.sk-w80  { width: 80%; }
+
+/* Header row */
+.sk-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+  background: none !important;
+  animation: none !important;
+}
+
+/* Avatar circle */
+.sk-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px !important;
+  flex-shrink: 0;
+}
+
+/* Pill */
+.sk-pill {
+  height: 28px;
+  width: 100px;
+  border-radius: 20px !important;
+}
+.sk-pill.sk-w80 { width: 80px; }
+
+/* Badge */
+.sk-badge {
+  height: 28px;
+  width: 140px;
+  border-radius: 20px !important;
+}
+
+/* Confidence row */
+.sk-conf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  background: none !important;
+  animation: none !important;
+}
+.sk-conf-bar {
+  flex: 1;
+  height: 5px;
+  border-radius: 10px !important;
+}
+
+/* Two-column blocks */
+.sk-blocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: none !important;
+  animation: none !important;
+}
+.sk-block {
+  padding: 1rem;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,0.03) !important;
+  animation: none !important;
+}
+.sk-block > * { animation: sk-shimmer 1.6s ease-in-out infinite; }
+
+/* Tag row */
+.sk-tags {
+  display: flex;
+  gap: 8px;
+  background: none !important;
+  animation: none !important;
+}
+.sk-tag {
+  height: 32px;
+  border-radius: 12px !important;
+}
+
+/* ── Chart variant ── */
+.sk-chart {
+  padding: 1.5rem;
+}
+.sk-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 160px;
+  padding-top: 1rem;
+  background: none !important;
+  animation: none !important;
+}
+.sk-bar {
+  flex: 1;
+  border-radius: 6px 6px 0 0 !important;
+  min-height: 20px;
+}
+
+/* ── Stat row variant ── */
+.sk-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  animation: none !important;
+}
+.sk-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px !important;
+  background: var(--bg-surface, rgba(255,255,255,0.03)) !important;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  padding: 1.25rem;
+  animation: none !important;
+}
+.sk-stat-card > * { animation: sk-shimmer 1.6s ease-in-out infinite; }
+.sk-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px !important;
+  flex-shrink: 0;
+}

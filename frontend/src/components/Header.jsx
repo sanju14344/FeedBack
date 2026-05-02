@@ -8,10 +8,12 @@ export default function Header({
   userText = null, 
   onLogout = null, 
   onBack = null,
-  hideMenu = false
+  hideMenu = false,
+  alerts = []
 }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -31,6 +33,33 @@ export default function Header({
         <div className="header-actions">
           {userText ? (
             <>
+              {alerts && alerts.length > 0 && (
+                <div className="notification-wrapper">
+                  <button className="icon-btn" onClick={() => setNotificationsOpen(!notificationsOpen)}>
+                    <Bell size={20} />
+                    <span className="notif-badge">{alerts.length}</span>
+                  </button>
+                  {notificationsOpen && (
+                    <div className="notifications-dropdown">
+                      <div className="nd-header">
+                        <h4>Notifications</h4>
+                        <button onClick={() => setNotificationsOpen(false)}><X size={14}/></button>
+                      </div>
+                      <div className="nd-body">
+                        {alerts.map((a, i) => (
+                          <div key={i} className={`nd-item ${a.level}`}>
+                            <AlertCircle size={16}/>
+                            <div>
+                              <strong>{a.subject}</strong>
+                              <p>{a.message}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="user-badge">{userText}</div>
               <button className="pill-btn danger" onClick={() => { onLogout?.(); setMenuOpen(false); }}>
                 ← Sign Out

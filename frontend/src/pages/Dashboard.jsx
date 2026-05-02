@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useMobile } from '../utils/useMobile';
+import SkeletonLoader from '../components/SkeletonLoader';
+
+// Lazy-loaded heavy components (charts + AI panel)
+const LazyTrendsChart   = lazy(() => import('../components/TrendsChart'));
+const LazyAICommandPanel = lazy(() => import('../components/AICommandPanel'));
 import { 
   BarChart3, 
   MessageSquare, 
@@ -41,20 +47,6 @@ import {
   Target,
   Shield
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  LineChart, 
-  Line,
-  BarChart,
-  Bar,
-  Cell
-} from 'recharts';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
 import Button from '../components/Button';
@@ -75,11 +67,14 @@ import {
   startSession,
   endSession,
   getSessionStatus,
-  getSessionHistory
+  getSessionHistory,
+  sendChatQuery
 } from '../api';
 import { generatePDFReport, generateSubjectPDF } from '../utils/reportGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Dashboard.css';
+import './AnalyticsBoard.css';
+
 
 // --- HELPERS ---
 const calculateConfidence = (feedbackCount) => {
@@ -152,9 +147,9 @@ const getAlerts = (feedback, subjects, dismissed = []) => {
     const id = `low-sat-${sub.id}`;
     if (!dismissed.includes(id)) {
       if (score < 50) {
-        alerts.push({ id, level: 'critical', subject: sub.name, message: `Critically low satisfaction at ${score}% — immediate attention needed` });
+        alerts.push({ id, level: 'critical', subject: sub.name, message: `Critically low satisfaction at ${score}% â€” immediate attention needed` });
       } else if (score < 65) {
-        alerts.push({ id, level: 'warning', subject: sub.name, message: `Below-average satisfaction at ${score}% — trending negatively` });
+        alerts.push({ id, level: 'warning', subject: sub.name, message: `Below-average satisfaction at ${score}% â€” trending negatively` });
       }
     }
   });
@@ -166,7 +161,7 @@ const getAlerts = (feedback, subjects, dismissed = []) => {
   return alerts;
 };
 
-const Sparkline = ({ data, color = 'var(--primary)', height = 28, width = 72 }) => {
+const Sparkline = memo(function Sparkline({ data, color = 'var(--primary)', height = 28, width = 72 }) {
   if (!data || data.length < 2) return null;
   const vals = data.map(d => d.value);
   const min = Math.min(...vals);
@@ -182,9 +177,9 @@ const Sparkline = ({ data, color = 'var(--primary)', height = 28, width = 72 }) 
       <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
     </svg>
   );
-};
+});
 
-const CircularProgress = ({ score, size = 68 }) => {
+const CircularProgress = memo(function CircularProgress({ score, size = 68 }) {
   const strokeWidth = 5;
   const radius = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * radius;
@@ -204,7 +199,7 @@ const CircularProgress = ({ score, size = 68 }) => {
       </text>
     </svg>
   );
-};
+});
 
 const renderFormattedFeedback = (text) => {
   if (!text) return null;
@@ -241,6 +236,7 @@ const renderFormattedFeedback = (text) => {
 
 export default function Dashboard({ theme, toggleTheme }) {
   const navigate = useNavigate();
+  const isMobile = useMobile();
   const [activeTab, setActiveTab] = useState('Analytics');
   const [profile, setProfile] = useState(null);
   const [feedback, setFeedback] = useState([]);
@@ -261,9 +257,9 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [selectedSubject, setSelectedSubject] = useState(null);
   // PDF confirmation modal state
   const [pdfConfirm, setPdfConfirm] = useState(null);
-  // Session state
   const [session, setSession] = useState(null);         // null | { is_active, started_at, ended_at }
   const [sessionHistory, setSessionHistory] = useState([]);
+  const [selectedSessionId, setSelectedSessionId] = useState('all');
   const [sessionLoading, setSessionLoading] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   // Legacy Manage tab inline staff edit state
@@ -285,6 +281,12 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [sessionEndSummary, setSessionEndSummary] = useState(null);
   const [lastUpdated] = useState(new Date());
+
+  // Chat Assistant State
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([{ role: 'ai', text: "Hi! I'm your AI assistant. Ask me anything about the recent feedback." }]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatTyping, setIsChatTyping] = useState(false);
 
   useEffect(() => {
     const uid = sessionStorage.getItem('cr_uid');
@@ -309,24 +311,14 @@ export default function Dashboard({ theme, toggleTheme }) {
   const fetchData = async (uid) => {
     setLoading(true);
     try {
-      // 1. Fetch Profile (Critical)
       const profileRes = await getCrProfile(uid);
       const prof = profileRes.data;
       setProfile(prof);
 
       if (prof.department) {
-        // Fetch AI insights
-        handleGetInsights(prof.department);
-
-        // 2. Fetch Feedback (Critical for UI)
-        const fbRes = await getFeedbackLogs(prof.department);
-        setFeedback(fbRes.data);
-        
-        // UNBLOCK THE UI NOW
-        setLoading(false);
-
-        // Background data fetching for Management
-        getDepartmentsByYear(prof.year).then(async (deptsRes) => {
+        let defId = 'all';
+        try {
+          const deptsRes = await getDepartmentsByYear(prof.year);
           const myDept = deptsRes.data.find(d => d.name === prof.department);
           if (myDept) {
             setProfile(prev => ({ ...prev, dept_id: myDept.id }));
@@ -338,21 +330,52 @@ export default function Dashboard({ theme, toggleTheme }) {
             ]);
             setStaff(staffRes.data);
             setSubjects(subRes.data);
-            setSession(sessionRes.data.is_active ? sessionRes.data : null);
-            setSessionHistory(historyRes.data || []);
+            
+            // Only show active session if it belongs to this CR
+            const activeSessionData = sessionRes.data?.is_active ? sessionRes.data : null;
+            const isMyActiveSession = activeSessionData && activeSessionData.cr_id === uid;
+            setSession(isMyActiveSession ? activeSessionData : null);
+            
+            // Only show history created by this CR
+            const myHistory = (historyRes.data || []).filter(s => s.cr_id === uid);
+            setSessionHistory(myHistory);
+            
+            defId = isMyActiveSession ? activeSessionData.id : (myHistory.length > 0 ? myHistory[0].id : 'all');
+            setSelectedSessionId(defId);
           }
-        }).catch(err => console.error("Error fetching management data:", err));
+        } catch(e) {
+          console.error("Error fetching management data:", e);
+        }
+
+        handleGetInsights(prof.department, defId === 'all' ? '' : defId);
+        const fbRes = await getFeedbackLogs(prof.department, defId === 'all' ? '' : defId);
+        setFeedback(fbRes.data);
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
-      if (loading) setLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleGetInsights = async (dept) => {
+  const handleSessionChange = async (e) => {
+    const newId = e.target.value;
+    setSelectedSessionId(newId);
+    if (!profile?.department) return;
+    
+    setIsRefreshing(true);
     try {
-      const insightRes = await getInsights(dept);
+      handleGetInsights(profile.department, newId === 'all' ? '' : newId);
+      const fbRes = await getFeedbackLogs(profile.department, newId === 'all' ? '' : newId);
+      setFeedback(fbRes.data);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleGetInsights = async (dept, sessionId = '') => {
+    try {
+      const insightRes = await getInsights(dept, sessionId);
       setInsights(insightRes.data);
     } catch (err) {
       console.error("Error fetching insights:", err);
@@ -529,7 +552,7 @@ export default function Dashboard({ theme, toggleTheme }) {
       setSessionHistory(histRes.data || []);
       setSessionEndSummary({
         duration: sessionDuration,
-        studentCount: lastSes?.student_count ?? '—',
+        studentCount: lastSes?.student_count ?? 'â€”',
         dominant,
         topComplaint: insights?.top_complaint_phrases?.[0] || null,
         satisfaction: insights?.satisfaction_score || 0,
@@ -557,6 +580,24 @@ export default function Dashboard({ theme, toggleTheme }) {
     navigate('/');
   };
 
+  const handleChatSubmit = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !profile?.department) return;
+    const msg = chatInput.trim();
+    setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setChatInput('');
+    setIsChatTyping(true);
+
+    try {
+      const res = await sendChatQuery(profile.department, selectedSessionId === 'all' ? '' : selectedSessionId, msg);
+      setChatMessages(prev => [...prev, { role: 'ai', text: res.data.response }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'ai', text: "Sorry, I couldn't process that right now." }]);
+    } finally {
+      setIsChatTyping(false);
+    }
+  };
+
   if (loading) return <HexagonLoader text="Loading CR Dashboard..." />;
 
   return (
@@ -569,6 +610,7 @@ export default function Dashboard({ theme, toggleTheme }) {
         toggleTheme={toggleTheme} 
         userText={`${profile?.full_name || 'CR'} (${profile?.year || '?'} Year, ${profile?.department || '?'})`} 
         onLogout={onLogout} 
+        alerts={getAlerts(feedback, subjects, alertsDismissed)}
       />
 
       <main className="dashboard-main">
@@ -589,57 +631,89 @@ export default function Dashboard({ theme, toggleTheme }) {
         </div>
 
         {activeTab === 'Analytics' && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="analytics-workspace"
+          <motion.div
+            initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0 }}
+            transition={{ duration: isMobile ? 0.2 : 0.3 }}
+            className="aw2"
           >
-            {/* --- TOP SUMMARY BAR --- */}
-            <div className="analytics-header-bar">
-               <div className="ah-left">
-                  <h2 className="workspace-title">Department Analytics</h2>
-                  <p className="workspace-sub">Real-time feedback intelligence for {profile?.department}</p>
-               </div>
-               <div className="ah-right">
-                  {session && <span className="session-live-badge"><span className="slb-dot"/>LIVE SESSION</span>}
-                  <span className="last-sync"><RefreshCw size={12} className={isAnalyzing ? 'spin' : ''} /> {lastUpdated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
-                  <Button onClick={() => setPdfConfirm({ type: 'full' })} variant="primary" className="btn-report">
-                    <FileText size={16} /> Export PDF
-                  </Button>
-               </div>
+            {/* â•â•â•â•â•â•â•â•â•â• COMMAND BAR â•â•â•â•â•â•â•â•â•â• */}
+            <div className="aw2-command-bar">
+              <div className="aw2-cb-left">
+                <div className="aw2-title-row">
+                  <div className="aw2-title-icon"><BarChart3 size={22}/></div>
+                  <div>
+                    <h2 className="aw2-title">Department Analytics</h2>
+                    <p className="aw2-subtitle">
+                      Real-time intelligence &middot; <span className="aw2-dept">{profile?.department}</span>
+                      {session && <span className="aw2-live-pill"><span className="aw2-live-dot"/>LIVE</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="aw2-cb-right">
+                <select
+                  className="aw2-session-select"
+                  value={selectedSessionId}
+                  onChange={handleSessionChange}
+                >
+                  <option value="all">All Sessions</option>
+                  {sessionHistory.map((s, i) => (
+                    <option key={s.id} value={s.id}>
+                      {s.is_active ? 'Live Session' : `Session ${sessionHistory.length - i} (${new Date(s.started_at).toLocaleDateString()})`}
+                    </option>
+                  ))}
+                </select>
+                <span className="aw2-sync-chip">
+                  <RefreshCw size={11} className={isAnalyzing ? 'spin' : ''}/>{lastUpdated.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                </span>
+                <button className="aw2-pdf-btn" onClick={() => setPdfConfirm({ type: 'full' })}>
+                  <FileText size={15}/> Export PDF
+                </button>
+              </div>
             </div>
 
-            {/* --- CORE STATS GRID --- */}
+            {/* â•â•â•â•â•â•â•â•â•â• KPI CARDS â•â•â•â•â•â•â•â•â•â• */}
             {(() => {
-              const sparkFb = getTrendData(feedback);
-              const sparkPos = getSentimentTrend(feedback).map(d => ({ value: d.pos }));
-              const sparkNeg = getSentimentTrend(feedback).map(d => ({ value: d.neg }));
-              const dTotal = getTrendDelta(feedback, 'total');
-              const dPos   = getTrendDelta(feedback, 'positive');
-              const dNeg   = getTrendDelta(feedback, 'negative');
+              const sparkFb  = getTrendData(feedback);
+              const sentTrnd = getSentimentTrend(feedback);
+              const sparkPos = sentTrnd.map(d => ({ value: d.pos }));
+              const sparkNeg = sentTrnd.map(d => ({ value: d.neg }));
+              const dTotal   = getTrendDelta(feedback, 'total');
+              const dPos     = getTrendDelta(feedback, 'positive');
+              const dNeg     = getTrendDelta(feedback, 'negative');
+              const satScore = insights?.satisfaction_score ?? null;
               const cards = [
-                { label: 'Total Feedback', val: feedback.length, icon: <MessageSquare size={20}/>, color: 'primary', delta: dTotal, spark: sparkFb, sparkColor: 'var(--primary)' },
-                { label: 'Positive',       val: feedback.filter(f=>f.sentiment_label==='Positive').length, icon:<CheckCircle2 size={20}/>, color:'success', delta:dPos, spark:sparkPos, sparkColor:'var(--success)' },
-                { label: 'Negative',       val: feedback.filter(f=>f.sentiment_label==='Negative').length, icon:<AlertCircle size={20}/>, color:'error',   delta:dNeg, spark:sparkNeg, sparkColor:'var(--error)' },
-                { label: 'Satisfaction',   val: insights?`${insights.satisfaction_score}%`:'--%',          icon:<Award size={20}/>,        color:'accent', delta:null, spark:getSatisfactionTrend(feedback), sparkColor:'var(--accent)' },
+                { id:'total',   label:'Total Feedback', val: feedback.length,                                                    icon:<MessageSquare size={20}/>, accent:'#7c3aed', delta:dTotal, spark:sparkFb,  sparkC:'#7c3aed' },
+                { id:'pos',     label:'Positive',        val: feedback.filter(f=>f.sentiment_label==='Positive').length,         icon:<CheckCircle2  size={20}/>, accent:'#10b981', delta:dPos,   spark:sparkPos, sparkC:'#10b981' },
+                { id:'neg',     label:'Negative',        val: feedback.filter(f=>f.sentiment_label==='Negative').length,         icon:<AlertCircle   size={20}/>, accent:'#ef4444', delta:dNeg,   spark:sparkNeg, sparkC:'#ef4444' },
+                { id:'sat',     label:'Satisfaction',    val: satScore !== null ? `${satScore}%` : '--%',                        icon:<Award         size={20}/>, accent:'#06b6d4', delta:null,   spark:getSatisfactionTrend(feedback), sparkC:'#06b6d4' },
               ];
               return (
-                <div className="stats-row">
-                  {cards.map((s, i) => (
-                    <motion.div key={i} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:i*0.07}} whileHover={{scale:1.03}} className={`stat-card-new stat-${s.color}`}>
-                      <div className="scn-icon">{s.icon}</div>
-                      <div className="scn-info">
-                        <span className="scn-label">{s.label}</span>
-                        <span className="scn-val">{s.val}</span>
-                        {s.delta !== null && s.delta !== undefined && (
-                          <span className={`scn-trend ${s.delta >= 0 ? 'up' : 'down'}`}>
-                            {s.delta >= 0 ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
-                            {Math.abs(s.delta)}% vs last week
+                <div className="aw2-kpi-grid">
+                  {cards.map((c, i) => (
+                    <motion.div
+                      key={c.id}
+                      className="aw2-kpi-card"
+                      style={{ '--kpi-accent': c.accent }}
+                      initial={isMobile ? {opacity:0} : {opacity:0,y:20}}
+                      animate={isMobile ? {opacity:1} : {opacity:1,y:0}}
+                      transition={isMobile ? {duration:0.2} : {delay:i*0.07}}
+                      whileHover={isMobile ? {} : {y:-4}}
+                    >
+                      <div className="aw2-kpi-icon">{c.icon}</div>
+                      <div className="aw2-kpi-body">
+                        <span className="aw2-kpi-label">{c.label}</span>
+                        <span className="aw2-kpi-val">{c.val}</span>
+                        {c.delta !== null && c.delta !== undefined && (
+                          <span className={`aw2-kpi-delta ${c.delta >= 0 ? 'up' : 'down'}`}>
+                            {c.delta >= 0 ? <TrendingUp size={10}/> : <TrendingDown size={10}/>}
+                            {Math.abs(c.delta)}% vs last week
                           </span>
                         )}
                       </div>
-                      <div className="scn-sparkline">
-                        <Sparkline data={s.spark} color={s.sparkColor} />
+                      <div className="aw2-kpi-spark">
+                        <Sparkline data={c.spark} color={c.sparkC} height={36} width={80}/>
                       </div>
                     </motion.div>
                   ))}
@@ -647,175 +721,155 @@ export default function Dashboard({ theme, toggleTheme }) {
               );
             })()}
 
-            {/* --- AI INTELLIGENCE & TRENDS PANEL --- */}
-            <div className="intelligence-grid">
-              {/* AI Command Center */}
-              <div className={`ai-insight-panel glass-card ${isAnalyzing ? 'ai-analyzing' : ''}`}>
-                <div className="ai-panel-header">
-                  <div className="aip-title-group">
-                    <div className="ai-sparkles-icon"><Sparkles size={20}/></div>
-                    <div>
-                      <h3>AI Command Center</h3>
-                      <span className="ai-panel-sub">Powered by sentiment intelligence</span>
-                    </div>
-                  </div>
-                  <button className={`reanalyze-btn ${isAnalyzing?'loading':''}`} onClick={reAnalyze} disabled={isAnalyzing}>
-                    <RefreshCw size={15} className={isAnalyzing?'spin':''}/>
-                    {isAnalyzing?'Analyzing...':'Re-analyze'}
-                  </button>
+            {/* â•â•â•â•â•â•â•â•â•â• HEALTH + GAMIFICATION STRIP â•â•â•â•â•â•â•â•â•â• */}
+            <div className="aw2-hg-strip">
+              <div className="aw2-health-card">
+                <div className="aw2-hc-icon-wrap"><Activity size={18}/></div>
+                <div className="aw2-hc-info">
+                  <span className="aw2-hc-label">Class Health Score</span>
+                  <span className="aw2-hc-sub">Aggregated from sentiment &amp; satisfaction</span>
                 </div>
-
-                {isAnalyzing ? (
-                  <div className="ai-skeleton-body">
-                    <div className="skel skel-badge"/><div className="skel skel-bar"/>
-                    <div className="skel skel-line"/><div className="skel skel-line short"/>
-                    <div className="skel skel-line"/><div className="skel skel-line short"/>
-                  </div>
-                ) : insights ? (
-                  <div className="ai-structured-body">
-                    <div className="ai-status-row">
-                      <span className={`ai-badge ${insights.ai_overall?.toLowerCase()}`}>
-                        {insights.ai_overall} Sentiment
-                      </span>
-                      <div className="ai-conf-wrap">
-                        <span className="ai-conf-label">Confidence</span>
-                        <div className="conf-bar"><div className="conf-fill" style={{width:`${calculateConfidence(feedback.length)}%`}}/></div>
-                        <span className="ai-conf-pct">{calculateConfidence(feedback.length)}%</span>
-                      </div>
-                    </div>
-
-                    <div className="ai-content-blocks">
-                      <div className="ai-block block-success">
-                        <label><CheckCircle2 size={14}/> Key Strengths</label>
-                        <ul>{insights.ai_strengths?.map((s,i)=>(
-                          <motion.li key={i} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} transition={{delay:i*0.06}}>{s}</motion.li>
-                        ))}</ul>
-                      </div>
-                      <div className="ai-block block-warning">
-                        <label><AlertCircle size={14}/> Critical Issues</label>
-                        <ul>{insights.ai_improvements?.map((s,i)=>(
-                          <motion.li key={i} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} transition={{delay:i*0.06}}>{s}</motion.li>
-                        ))}</ul>
-                      </div>
-                    </div>
-
-                    <div className="ai-action-suggestion">
-                      <label><Lightbulb size={16}/> Recommended Actions</label>
-                      <div className="suggestion-tags">
-                        {insights.ai_suggestions?.map((s,i)=>(
-                          <motion.div key={i} className="s-tag" whileHover={{scale:1.05}} initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.1+i*0.06}}>{s}</motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="ai-loading-placeholder">
-                    <div className="pulse-circle"/>
-                    <p>Aggregating sentiment patterns...</p>
-                  </div>
-                )}
+                <div className="aw2-hc-score-wrap">
+                  <CircularProgress score={insights?.class_health_score || 0} size={64}/>
+                  <span className={`aw2-health-badge ${insights?.health_status?.toLowerCase() || 'evaluating'}`}>
+                    {insights?.health_status || 'Evaluating'}
+                  </span>
+                </div>
               </div>
-
-              {/* Trends Chart */}
-              <GlassCard className="trends-panel">
-                <div className="panel-header">
-                  <h3><TrendingUp size={20}/> Trend Analysis</h3>
-                  <div className="trend-toggle-group">
-                    {['sentiment','feedback','satisfaction'].map(t=>(
-                      <button key={t} className={`trend-toggle-btn ${trendToggle===t?'active':''}`} onClick={()=>setTrendToggle(t)}>
-                        {t.charAt(0).toUpperCase()+t.slice(1)}
-                      </button>
-                    ))}
-                  </div>
+              <div className="aw2-gm-card">
+                <div className="aw2-gm-stat">
+                  <span className="aw2-gm-val">{actions.filter(a => a.completed).length}</span>
+                  <span className="aw2-gm-label">Issues Resolved</span>
                 </div>
-                <div className="chart-container">
-                  <ResponsiveContainer width="100%" height={220}>
-                    {trendToggle==='sentiment' ? (
-                      <AreaChart data={getSentimentTrend(feedback)}>
-                        <defs>
-                          <linearGradient id="colorPos" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--success)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--success)" stopOpacity={0}/></linearGradient>
-                          <linearGradient id="colorNeg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--error)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--error)" stopOpacity={0}/></linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--text-muted)',fontSize:10}}/>
-                        <Tooltip contentStyle={{background:'var(--bg-elevated)',border:'1px solid var(--glass-border)',borderRadius:'8px',fontSize:'12px'}}/>
-                        <Area type="monotone" dataKey="pos" name="Positive" stroke="var(--success)" fillOpacity={1} fill="url(#colorPos)" strokeWidth={2}/>
-                        <Area type="monotone" dataKey="neg" name="Negative" stroke="var(--error)"   fillOpacity={1} fill="url(#colorNeg)" strokeWidth={2}/>
-                      </AreaChart>
-                    ) : trendToggle==='feedback' ? (
-                      <AreaChart data={getTrendData(feedback)}>
-                        <defs><linearGradient id="colorFb" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/></linearGradient></defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--text-muted)',fontSize:10}}/>
-                        <Tooltip contentStyle={{background:'var(--bg-elevated)',border:'1px solid var(--glass-border)',borderRadius:'8px',fontSize:'12px'}}/>
-                        <Area type="monotone" dataKey="value" name="Feedback Count" stroke="var(--primary)" fillOpacity={1} fill="url(#colorFb)" strokeWidth={2}/>
-                      </AreaChart>
-                    ) : (
-                      <AreaChart data={getSatisfactionTrend(feedback)}>
-                        <defs><linearGradient id="colorSat" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/><stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/></linearGradient></defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--text-muted)',fontSize:10}}/>
-                        <Tooltip contentStyle={{background:'var(--bg-elevated)',border:'1px solid var(--glass-border)',borderRadius:'8px',fontSize:'12px'}} formatter={v=>[`${v}%`,'Satisfaction']}/>
-                        <Area type="monotone" dataKey="value" name="Satisfaction %" stroke="var(--accent)" fillOpacity={1} fill="url(#colorSat)" strokeWidth={2}/>
-                      </AreaChart>
-                    )}
-                  </ResponsiveContainer>
+                <div className="aw2-gm-divider"/>
+                <div className="aw2-gm-stat">
+                  <span className="aw2-gm-val aw2-gm-green">+{Math.max(0, getTrendDelta(feedback,'satisfaction') || 0)}%</span>
+                  <span className="aw2-gm-label">Satisfaction Growth</span>
                 </div>
-              </GlassCard>
+              </div>
             </div>
 
-            {/* --- SUBJECT-WISE ANALYSIS GRID --- */}
-            <div className="subject-analysis-section">
-              <div className="section-header-row">
-                <h3 className="sub-section-title"><PieIcon size={20} /> Subject Performance</h3>
-                <span className="badge-count">{subjects.length} Subjects</span>
+            {/* â•â•â•â•â•â•â•â•â•â• AI + ISSUES GRID â•â•â•â•â•â•â•â•â•â• */}
+            <div className="aw2-intel-grid">
+              {/* AI Command Center */}
+              <Suspense fallback={<SkeletonLoader variant="ai-panel"/>}>
+                <LazyAICommandPanel
+                  insights={insights}
+                  isAnalyzing={isAnalyzing}
+                  reAnalyze={reAnalyze}
+                  feedbackCount={feedback.length}
+                  isMobile={isMobile}
+                />
+              </Suspense>
+
+              {/* Detected Issues + Trend Story */}
+              <div className="aw2-issues-col">
+                <div className="aw2-panel aw2-issues-panel">
+                  <div className="aw2-panel-hdr">
+                    <AlertTriangle size={18}/><span>Auto-Detected Issues</span>
+                  </div>
+                  <div className="aw2-issues-list">
+                    {insights?.detected_issues?.length > 0 ? insights.detected_issues.map((issue, idx) => (
+                      <div key={idx} className={`aw2-issue aw2-issue-${issue.priority.toLowerCase()}`}>
+                        <span className="aw2-issue-pri">{issue.priority}</span>
+                        <p>{issue.issue}</p>
+                      </div>
+                    )) : (
+                      <div className="aw2-di-empty">
+                        <CheckCircle2 size={22} opacity={0.4}/>
+                        <p>No critical issues detected</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="aw2-trend-story">
+                  <div className="aw2-ts-hdr"><Sparkles size={13}/><strong>AI Trend Story</strong></div>
+                  <p>{insights?.trend_story || 'Gathering more data for trend analysis...'}</p>
+                </div>
               </div>
-              <div className="subject-cards-grid">
+            </div>
+
+            {/* â•â•â•â•â•â•â•â•â•â• TRENDS + TIMELINE â•â•â•â•â•â•â•â•â•â• */}
+            <div className="aw2-trends-row">
+              <Suspense fallback={<SkeletonLoader variant="chart"/>}>
+                <LazyTrendsChart
+                  trendToggle={trendToggle}
+                  setTrendToggle={setTrendToggle}
+                  feedback={feedback}
+                  isMobile={isMobile}
+                />
+              </Suspense>
+              <div className="aw2-panel aw2-timeline-panel">
+                <div className="aw2-panel-hdr"><Clock size={18}/><span>Action Timeline</span></div>
+                <div className="aw2-timeline">
+                  {actions.slice(0,5).map(action => (
+                    <div key={action.id} className="aw2-te">
+                      <div className="aw2-te-dot"/>
+                      <div className="aw2-te-body">
+                        <span className="aw2-te-date">{new Date(action.date).toLocaleDateString()}</span>
+                        <p className={action.completed ? 'aw2-te-done' : ''}>{action.text}</p>
+                        {action.priority && <span className={`aw2-te-pri p-${action.priority.toLowerCase()}`}>{action.priority}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  {actions.length === 0 && <p className="aw2-te-empty">No actions tracked yet.</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* â•â•â•â•â•â•â•â•â•â• SUBJECT PERFORMANCE GRID â•â•â•â•â•â•â•â•â•â• */}
+            <div className="aw2-subject-section">
+              <div className="aw2-section-hdr">
+                <h3 className="aw2-section-title"><PieIcon size={18}/> Subject Performance</h3>
+                <span className="aw2-count-badge">{subjects.length} Subjects</span>
+              </div>
+              <div className="aw2-subject-grid">
                 {subjects.map((sub, idx) => {
-                  const subFeedback = feedback.filter(f => f.subject_id === sub.id);
-                  const posCount = subFeedback.filter(f => f.sentiment_label === 'Positive').length;
-                  const negCount = subFeedback.filter(f => f.sentiment_label === 'Negative').length;
-                  const neuCount = subFeedback.filter(f => f.sentiment_label === 'Neutral').length;
-                  const score = subFeedback.length > 0 ? Math.round((posCount / subFeedback.length) * 100) : 0;
+                  const subFeedback    = feedback.filter(f => f.subject_id === sub.id);
+                  const posCount       = subFeedback.filter(f => f.sentiment_label === 'Positive').length;
+                  const negCount       = subFeedback.filter(f => f.sentiment_label === 'Negative').length;
+                  const neuCount       = subFeedback.filter(f => f.sentiment_label === 'Neutral').length;
+                  const score          = subFeedback.length > 0 ? Math.round((posCount / subFeedback.length) * 100) : 0;
                   const assignedFaculty = staff.find(s => s.subject_id === sub.id);
-                  const healthClass = score >= 75 ? 'healthy' : score >= 50 ? 'moderate' : 'critical';
+                  const hClass         = score >= 75 ? 'healthy' : score >= 50 ? 'moderate' : 'critical';
+                  const hColor         = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
                   return (
                     <motion.div
                       key={sub.id}
-                      className={`subject-score-card ${healthClass} ${expandedSubject===sub.id?'expanded':''}`}
+                      className={`aw2-sub-card aw2-sub-${hClass} ${expandedSubject===sub.id?'expanded':''}`}
+                      style={{ '--sub-color': hColor }}
                       onClick={() => setExpandedSubject(expandedSubject===sub.id ? null : sub.id)}
-                      whileHover={{ y: -6, boxShadow: '0 12px 32px rgba(124,58,237,0.2)' }}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.06 }}
+                      whileHover={isMobile ? {} : { y:-5 }}
+                      initial={isMobile ? {opacity:0} : {opacity:0,y:20}}
+                      animate={isMobile ? {opacity:1} : {opacity:1,y:0}}
+                      transition={isMobile ? {duration:0.2} : {delay:idx*0.06}}
                     >
-                      <div className="ssc-main">
-                        <div className="ssc-info">
+                      <div className="aw2-sc-top">
+                        <div className="aw2-sc-info">
                           <h4>{sub.name}</h4>
-                          <span className="ssc-faculty"><User size={11}/> {assignedFaculty?.name || 'Faculty'}</span>
-                          <span className="ssc-count">{subFeedback.length} responses</span>
+                          <span className="aw2-sc-faculty"><User size={11}/> {assignedFaculty?.name || 'Faculty'}</span>
+                          <span className="aw2-sc-count">{subFeedback.length} responses</span>
                         </div>
-                        <CircularProgress score={score} />
+                        <CircularProgress score={score} size={60}/>
                       </div>
-                      <div className={`ssc-health-bar health-${healthClass}`}/>
-                      {expandedSubject === sub.id && (
-                        <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} className="ssc-details">
-                          <div className="ssc-mini-bar">
-                            {subFeedback.length > 0 && (
-                              <>
-                                <div className="smb-fill smb-pos" style={{width:`${(posCount/subFeedback.length)*100}%`}}/>
-                                <div className="smb-fill smb-neu" style={{width:`${(neuCount/subFeedback.length)*100}%`}}/>
-                                <div className="smb-fill smb-neg" style={{width:`${(negCount/subFeedback.length)*100}%`}}/>
-                              </>
-                            )}
+                      <div className="aw2-sc-bar-wrap">
+                        {subFeedback.length > 0 && (
+                          <div className="aw2-sc-bar">
+                            <div className="aw2-sc-fill aw2-sc-pos" style={{width:`${(posCount/subFeedback.length)*100}%`}}/>
+                            <div className="aw2-sc-fill aw2-sc-neu" style={{width:`${(neuCount/subFeedback.length)*100}%`}}/>
+                            <div className="aw2-sc-fill aw2-sc-neg" style={{width:`${(negCount/subFeedback.length)*100}%`}}/>
                           </div>
-                          <div className="ssc-metrics">
-                            <div className="m-item"><span>Positive</span><label className="text-success">{posCount}</label></div>
-                            <div className="m-item"><span>Neutral</span><label className="text-warning">{neuCount}</label></div>
-                            <div className="m-item"><span>Negative</span><label className="text-error">{negCount}</label></div>
+                        )}
+                      </div>
+                      {expandedSubject === sub.id && (
+                        <motion.div initial={{opacity:0}} animate={{opacity:1}} className="aw2-sc-detail">
+                          <div className="aw2-sc-metrics">
+                            <div className="aw2-scm"><span>Positive</span><label style={{color:'#10b981'}}>{posCount}</label></div>
+                            <div className="aw2-scm"><span>Neutral</span><label style={{color:'#f59e0b'}}>{neuCount}</label></div>
+                            <div className="aw2-scm"><span>Negative</span><label style={{color:'#ef4444'}}>{negCount}</label></div>
                           </div>
                           {subFeedback[0]?.feedback_text && (
-                            <p className="ssc-note">Latest: "{subFeedback[0].feedback_text.substring(0,60)}..."</p>
+                            <p className="aw2-sc-quote">"{subFeedback[0].feedback_text.substring(0,70)}..."</p>
                           )}
                         </motion.div>
                       )}
@@ -825,30 +879,31 @@ export default function Dashboard({ theme, toggleTheme }) {
               </div>
             </div>
 
-            {/* --- ALERTS & WARNINGS PANEL --- */}
+            {/* â•â•â•â•â•â•â•â•â•â• ALERTS â•â•â•â•â•â•â•â•â•â• */}
             {(() => {
               const activeAlerts = getAlerts(feedback, subjects, alertsDismissed);
               if (activeAlerts.length === 0) return null;
               return (
-                <div className="alerts-section">
-                  <div className="section-header-row">
-                    <h3 className="sub-section-title"><AlertTriangle size={20}/> Attention Needed
-                      <span className="alerts-count-badge">{activeAlerts.length}</span>
+                <div className="aw2-alerts-section">
+                  <div className="aw2-section-hdr">
+                    <h3 className="aw2-section-title">
+                      <AlertTriangle size={18}/> Attention Needed
+                      <span className="aw2-alert-badge">{activeAlerts.length}</span>
                     </h3>
                   </div>
-                  <div className="alerts-grid">
+                  <div className="aw2-alerts-grid">
                     {activeAlerts.map(alert => (
-                      <motion.div key={alert.id} className={`alert-card alert-${alert.level}`}
+                      <motion.div key={alert.id} className={`aw2-alert aw2-alert-${alert.level}`}
                         initial={{opacity:0,x:-12}} animate={{opacity:1,x:0}} exit={{opacity:0,x:12}}
                       >
-                        <div className="alert-icon-wrap">
+                        <div className="aw2-alert-icon">
                           {alert.level==='critical' ? <AlertCircle size={18}/> : <AlertTriangle size={18}/>}
                         </div>
-                        <div className="alert-body">
-                          <span className="alert-subject">{alert.subject}</span>
-                          <p className="alert-msg">{alert.message}</p>
+                        <div className="aw2-alert-body">
+                          <span className="aw2-alert-subj">{alert.subject}</span>
+                          <p>{alert.message}</p>
                         </div>
-                        <button className="alert-dismiss" onClick={()=>dismissAlert(alert.id)}><X size={14}/></button>
+                        <button className="aw2-alert-dismiss" onClick={()=>dismissAlert(alert.id)}><X size={14}/></button>
                       </motion.div>
                     ))}
                   </div>
@@ -856,74 +911,80 @@ export default function Dashboard({ theme, toggleTheme }) {
               );
             })()}
 
-            {/* --- KEYWORDS & ACTION CENTER --- */}
-            <div className="action-center-grid">
-               {/* Keywords Cloud */}
-               <GlassCard className="keywords-cloud">
-                 <div className="panel-header">
-                   <h3><Terminal size={18}/> Top Sentiment Phrases</h3>
-                 </div>
-                 <div className="tag-cloud">
-                   {insights?.top_compliment_phrases?.map((p,i) => (
-                     <motion.span key={i} className="cloud-tag tag-pos" whileHover={{scale:1.08}}>{p}</motion.span>
-                   ))}
-                   {insights?.top_complaint_phrases?.map((p,i) => (
-                     <motion.span key={i} className="cloud-tag tag-neg" whileHover={{scale:1.08}}>{p}</motion.span>
-                   ))}
-                 </div>
-               </GlassCard>
+            {/* â•â•â•â•â•â•â•â•â•â• KEYWORDS + ACTION CENTER â•â•â•â•â•â•â•â•â•â• */}
+            <div className="aw2-bottom-grid">
+              {/* Keywords */}
+              <div className="aw2-panel aw2-keywords-panel">
+                <div className="aw2-panel-hdr"><Terminal size={18}/><span>Top Sentiment Phrases</span></div>
+                <div className="aw2-tag-cloud">
+                  {insights?.top_compliment_phrases?.map((p,i) => (
+                    <motion.span key={i} className="aw2-tag aw2-tag-pos" whileHover={{scale:1.06}}>{p}</motion.span>
+                  ))}
+                  {insights?.top_complaint_phrases?.map((p,i) => (
+                    <motion.span key={i} className="aw2-tag aw2-tag-neg" whileHover={{scale:1.06}}>{p}</motion.span>
+                  ))}
+                  {!insights?.top_compliment_phrases?.length && !insights?.top_complaint_phrases?.length && (
+                    <p className="aw2-empty-tags">Phrases will appear after feedback is collected</p>
+                  )}
+                </div>
+              </div>
 
-               {/* Action Center */}
-               <GlassCard className="action-tracker">
-                 <div className="panel-header">
-                   <h3><ListTodo size={18}/> CR Action Center</h3>
-                   <span className="action-badge">{actions.filter(a=>!a.completed).length} pending</span>
-                 </div>
-                 <div className="action-input-area">
-                   <div className="action-input-grp">
-                     <input type="text" placeholder="Add an action item..." value={newActionText}
-                       onChange={e=>setNewActionText(e.target.value)}
-                       onKeyDown={e=>e.key==='Enter'&&handleAddAction()}
-                     />
-                     <button onClick={handleAddAction}><PlusCircle size={18}/></button>
-                   </div>
-                   <div className="action-meta-row">
-                     <select className="action-priority-select" value={actionPriority} onChange={e=>setActionPriority(e.target.value)}>
-                       <option value="High">🔴 High</option>
-                       <option value="Medium">🟡 Medium</option>
-                       <option value="Low">🟢 Low</option>
-                     </select>
-                     <select className="action-subject-select" value={actionSubjectTag} onChange={e=>setActionSubjectTag(e.target.value)}>
-                       <option value="">No subject tag</option>
-                       {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-                     </select>
-                   </div>
-                 </div>
-                 <div className="action-list-mini">
-                   <AnimatePresence>
-                     {actions.map(action=>(
-                       <motion.div key={action.id} layout
-                         className={`action-item-mini ${action.completed?'done':''}`}
-                         initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,height:0}}
-                       >
-                         <div className="action-chk" onClick={()=>toggleAction(action.id)}>
-                           {action.completed?<CheckCircle2 size={16}/>:<div className="chk-box"/>}
-                         </div>
-                         <div className="action-body">
-                           <span className="action-txt">{action.text}</span>
-                           <div className="action-tags-row">
-                             {action.priority && <span className={`action-priority-tag p-${action.priority?.toLowerCase()}`}>{action.priority}</span>}
-                             {action.subjectTag && <span className="action-subject-tag">{action.subjectTag}</span>}
-                           </div>
-                         </div>
-                         <button className="action-del" onClick={()=>deleteAction(action.id)}><Trash2 size={12}/></button>
-                       </motion.div>
-                     ))}
-                   </AnimatePresence>
-                   {actions.length===0&&<p className="empty-actions">No actions tracked yet. Add your first resolution above.</p>}
-                 </div>
-               </GlassCard>
+              {/* Action Center */}
+              <div className="aw2-panel aw2-actions-panel">
+                <div className="aw2-panel-hdr">
+                  <ListTodo size={18}/><span>CR Action Center</span>
+                  <span className="aw2-pending-badge">{actions.filter(a=>!a.completed).length} pending</span>
+                </div>
+                <div className="aw2-action-input-area">
+                  <div className="aw2-action-row">
+                    <input
+                      className="aw2-action-input"
+                      type="text"
+                      placeholder="Add an action item..."
+                      value={newActionText}
+                      onChange={e=>setNewActionText(e.target.value)}
+                      onKeyDown={e=>e.key==='Enter'&&handleAddAction()}
+                    />
+                    <button className="aw2-action-add" onClick={handleAddAction}><PlusCircle size={18}/></button>
+                  </div>
+                  <div className="aw2-action-meta">
+                    <select className="aw2-action-select" value={actionPriority} onChange={e=>setActionPriority(e.target.value)}>
+                      <option value="High">ðŸ”´ High</option>
+                      <option value="Medium">ðŸŸ¡ Medium</option>
+                      <option value="Low">ðŸŸ¢ Low</option>
+                    </select>
+                    <select className="aw2-action-select" value={actionSubjectTag} onChange={e=>setActionSubjectTag(e.target.value)}>
+                      <option value="">No subject tag</option>
+                      {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="aw2-action-list">
+                  <AnimatePresence>
+                    {actions.map(action => (
+                      <motion.div key={action.id} layout
+                        className={`aw2-action-item ${action.completed?'done':''}`}
+                        initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,height:0}}
+                      >
+                        <div className="aw2-ai-chk" onClick={()=>toggleAction(action.id)}>
+                          {action.completed ? <CheckCircle2 size={16} color="#10b981"/> : <div className="aw2-chk-box"/>}
+                        </div>
+                        <div className="aw2-ai-body">
+                          <span className="aw2-ai-txt">{action.text}</span>
+                          <div className="aw2-ai-tags">
+                            {action.priority && <span className={`aw2-pri-tag p-${action.priority.toLowerCase()}`}>{action.priority}</span>}
+                            {action.subjectTag && <span className="aw2-sub-tag">{action.subjectTag}</span>}
+                          </div>
+                        </div>
+                        <button className="aw2-ai-del" onClick={()=>deleteAction(action.id)}><Trash2 size={12}/></button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  {actions.length===0 && <p className="aw2-no-actions">No actions yet. Add your first resolution above.</p>}
+                </div>
+              </div>
             </div>
+
           </motion.div>
         )}
 
@@ -933,9 +994,27 @@ export default function Dashboard({ theme, toggleTheme }) {
             animate={{ opacity: 1 }}
             className="feedback-subject-list-workspace"
           >
-            <div className="fsl-header">
-              <h2 className="workspace-title">Feedback by Subject</h2>
-              <p className="workspace-sub">Tap a subject to view all its student feedback</p>
+            <div className="fsl-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2 className="workspace-title">Feedback by Subject</h2>
+                <p className="workspace-sub">Tap a subject to view all its student feedback</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <select 
+                    className="session-selector" 
+                    value={selectedSessionId} 
+                    onChange={handleSessionChange}
+                    style={{ padding: '6px 10px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', fontSize: '0.8rem', marginRight: '8px' }}
+                  >
+                    <option value="all" style={{ color: '#000' }}>All Sessions</option>
+                    {sessionHistory.map((s, i) => (
+                      <option key={s.id} value={s.id} style={{ color: '#000' }}>
+                        {s.is_active ? 'Live Session' : `Session ${sessionHistory.length - i} (${new Date(s.started_at).toLocaleDateString()})`}
+                      </option>
+                    ))}
+                  </select>
+                  {session && <span className="session-live-badge" style={{ padding: '6px 12px', fontSize: '0.75rem' }}><span className="slb-dot"/>LIVE SESSION</span>}
+              </div>
             </div>
 
             {subjects.length === 0 ? (
@@ -957,11 +1036,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                     <motion.div
                       key={sub.id}
                       className="fsl-row"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.07 }}
+                      initial={isMobile ? { opacity: 0 } : { opacity: 0, x: -20 }}
+                      animate={isMobile ? { opacity: 1 } : { opacity: 1, x: 0 }}
+                      transition={isMobile ? { duration: 0.2 } : { delay: idx * 0.07 }}
                       onClick={() => setSelectedSubject(sub)}
-                      whileHover={{ x: 4 }}
+                      whileHover={isMobile ? {} : { x: 4 }}
                     >
                       <div className="fsl-rank">{String(idx + 1).padStart(2, '0')}</div>
 
@@ -988,7 +1067,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                             {score}%
                           </span>
                         ) : (
-                          <span className="fsl-score no-data">—</span>
+                          <span className="fsl-score no-data">â€”</span>
                         )}
                         <span className="fsl-fb-count">{subFeedback.length} responses</span>
                       </div>
@@ -1161,7 +1240,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                             <h5><User size={16} style={{verticalAlign: 'middle', marginRight: '6px'}} /> {s.name}</h5>
                           )}
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                            <Home size={14} style={{opacity: 0.6}} /> Unassigned Staff • {profile.department}
+                            <Home size={14} style={{opacity: 0.6}} /> Unassigned Staff â€¢ {profile.department}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1246,8 +1325,9 @@ export default function Dashboard({ theme, toggleTheme }) {
         {activeTab === 'Session' && (
           <motion.div 
             className="session-tab-content"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 15 }}
+            animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0 }}
+            transition={{ duration: isMobile ? 0.2 : 0.3 }}
           >
             <div className="admin-header" style={{ marginBottom: '2rem' }}>
               <div className="ah-left">
@@ -1391,12 +1471,72 @@ export default function Dashboard({ theme, toggleTheme }) {
             <SessionSummaryModal summary={sessionEndSummary} onClose={()=>setShowSessionSummary(false)} />
           )}
         </AnimatePresence>
+
+        {/* --- FLOATING AI CHAT ASSISTANT --- */}
+        <div className={`floating-chat-widget ${chatOpen ? 'open' : ''}`}>
+          <AnimatePresence>
+            {!chatOpen && (
+              <motion.button 
+                className="chat-fab" 
+                onClick={() => setChatOpen(true)}
+                initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                whileHover={isMobile ? {} : { scale: 1.05 }}
+              >
+                <MessageSquare size={24} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {chatOpen && (
+              <motion.div 
+                className="chat-panel"
+                initial={{ opacity: 0, y: isMobile ? 10 : 20, scale: isMobile ? 1 : 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: isMobile ? 10 : 20, scale: isMobile ? 1 : 0.95 }}
+                transition={isMobile ? { duration: 0.2 } : { type: 'spring', stiffness: 300, damping: 25 }}
+              >
+                <div className="chat-header">
+                  <div className="ch-info">
+                    <Sparkles size={18} />
+                    <span>AI Assistant</span>
+                  </div>
+                  <button onClick={() => setChatOpen(false)}><X size={16}/></button>
+                </div>
+                <div className="chat-body">
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} className={`chat-bubble ${msg.role}`}>
+                      <div className="cb-inner">{msg.text}</div>
+                    </div>
+                  ))}
+                  {isChatTyping && (
+                    <div className="chat-bubble ai typing">
+                      <div className="dot"></div><div className="dot"></div><div className="dot"></div>
+                    </div>
+                  )}
+                </div>
+                <form className="chat-input-area" onSubmit={handleChatSubmit}>
+                  <input 
+                    type="text" 
+                    placeholder="Ask about feedback trends..." 
+                    value={chatInput} 
+                    onChange={e => setChatInput(e.target.value)}
+                    disabled={isChatTyping}
+                  />
+                  <button type="submit" disabled={!chatInput.trim() || isChatTyping}>
+                    <ArrowLeft size={16} style={{transform: 'rotate(135deg)'}} />
+                  </button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
     </div>
   );
 }
 
-// ─── SUBJECT FEEDBACK MODAL ───────────────────────────────────────────────────
+// â”€â”€â”€ SUBJECT FEEDBACK MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SubjectFeedbackModal({ subject, feedbackList, onClose, renderFormattedFeedback, profile, staff }) {
   const [filter, setFilter] = useState('All');
   const [showPdfConfirm, setShowPdfConfirm] = useState(false);
@@ -1518,7 +1658,7 @@ function SubjectFeedbackModal({ subject, feedbackList, onClose, renderFormattedF
   );
 }
 
-// ─── PDF CONFIRM MODAL ────────────────────────────────────────────────────────
+// â”€â”€â”€ PDF CONFIRM MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PdfConfirmModal({ title, description, fileName, onConfirm, onCancel }) {
   return createPortal(
     <motion.div
@@ -1569,7 +1709,7 @@ function PdfConfirmModal({ title, description, fileName, onConfirm, onCancel }) 
   );
 }
 
-// ─── SESSION SUMMARY MODAL ────────────────────────────────────────────────────
+// â”€â”€â”€ SESSION SUMMARY MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SessionSummaryModal({ summary, onClose }) {
   const sentColor = summary.dominant === 'Positive' ? 'var(--success)' : summary.dominant === 'Negative' ? 'var(--error)' : 'var(--warning)';
   return createPortal(

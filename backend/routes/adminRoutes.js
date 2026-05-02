@@ -5,6 +5,7 @@ const sessionController = require('../controllers/sessionController');
 
 router.get('/feedback', adminController.getFeedback);
 router.get('/insights', adminController.getInsights);
+router.post('/chat', adminController.chat);
 
 router.get('/crs', adminController.getCRs);
 router.post('/cr/approve', adminController.approveCR);
