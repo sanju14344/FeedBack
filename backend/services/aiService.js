@@ -187,6 +187,7 @@ The CR is asking you a question. Answer concisely, intelligently, and proactivel
 CR Query: ${message}`;
 
   try {
+    console.log(`[AI Chat] Processing query: "${message}" with ${feedbackContext.length} feedback entries.`);
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -199,7 +200,11 @@ CR Query: ${message}`;
 
     return { response: response.choices[0].message.content };
   } catch (err) {
-    console.error("AI Chat failed:", err.message);
+    console.error("CRITICAL: AI Chat API Call Failed!");
+    console.error("Error Name:", err.name);
+    console.error("Error Message:", err.message);
+    if (err.status) console.error("HTTP Status:", err.status);
+    
     return { response: "I encountered an error analyzing the feedback. Please try again later." };
   }
 };
