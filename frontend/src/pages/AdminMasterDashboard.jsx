@@ -171,13 +171,9 @@ export default function AdminMasterDashboard() {
   return (
     <div className="amd-root">
       {/* Background layers */}
-      <div className="amd-bg-gradient" />
-      <div className="amd-orbs" aria-hidden="true">
-        <div className="amd-orb amd-orb-1" />
-        <div className="amd-orb amd-orb-2" />
-        <div className="amd-orb amd-orb-3" />
-      </div>
-      <ParticleCanvas />
+      <div className="mesh-bg" />
+      <div className="light-blob-static blob-1" />
+      <div className="light-blob-static blob-2" />
 
       {/* Header */}
       <motion.header
@@ -224,26 +220,26 @@ export default function AdminMasterDashboard() {
               <Users size={22} strokeWidth={2} />
             </div>
             <div>
-              <h1 className="amd-page-title">Class Representatives</h1>
+              <h1 className="amd-page-title">Class Representatives [v2]</h1>
               <p className="amd-page-sub">Approve new CR requests, manage access and remove members.</p>
             </div>
           </motion.div>
 
           {/* Stats row */}
-          <motion.div className="amd-stats" variants={itemVariants}>
-            <div className="amd-stat-card">
+          <div className="amd-stats">
+            <motion.div className="amd-stat-card" variants={itemVariants}>
               <span className="amd-stat-val">{crs.length}</span>
               <span className="amd-stat-label">Total CRs</span>
-            </div>
-            <div className="amd-stat-card amd-stat-card--approved">
+            </motion.div>
+            <motion.div className="amd-stat-card amd-stat-card--approved" variants={itemVariants}>
               <span className="amd-stat-val">{approvedCount}</span>
               <span className="amd-stat-label">Approved</span>
-            </div>
-            <div className="amd-stat-card amd-stat-card--pending">
+            </motion.div>
+            <motion.div className="amd-stat-card amd-stat-card--pending" variants={itemVariants}>
               <span className="amd-stat-val">{pendingCount}</span>
               <span className="amd-stat-label">Pending</span>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
 
           {/* Table card */}
           <motion.div className="amd-card" variants={itemVariants}>
@@ -275,6 +271,7 @@ export default function AdminMasterDashboard() {
                     <th>Name / Email</th>
                     <th>Department</th>
                     <th>Year</th>
+                    <th>Phone</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -282,7 +279,7 @@ export default function AdminMasterDashboard() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="amd-td-center">
+                      <td colSpan={6} className="amd-td-center">
                         <div className="amd-loading">
                           <div className="amd-spinner" />
                           <span>Loading CRs…</span>
@@ -291,7 +288,7 @@ export default function AdminMasterDashboard() {
                     </tr>
                   ) : crs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="amd-td-center">
+                      <td colSpan={6} className="amd-td-center">
                         <div className="amd-empty">
                           <Users size={36} strokeWidth={1.5} />
                           <p>No Class Representatives found.</p>
@@ -320,6 +317,9 @@ export default function AdminMasterDashboard() {
                           </td>
                           <td>
                             <span className="amd-year">{cr.year} Year</span>
+                          </td>
+                          <td>
+                            <span className="amd-phone">{cr.phone || '—'}</span>
                           </td>
                           <td>
                             <StatusBadge approved={cr.is_approved} />

@@ -15,15 +15,13 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 exports.crSignup = async (req, res) => {
-  const { email, full_name, department, year, password } = req.body;
+  const { email, full_name, department, year, phone, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: "Email and password required" });
   
   try {
-    // Generate a secure hash
     const passcode_hash = await bcrypt.hash(password, 10);
-    // Use a generated uid for mock auth since we're bypassing Supabase's native auth for this custom flow
     const id = crypto.randomUUID();
-    const row = { id, email, full_name, department, year, passcode_hash, is_approved: false };
+    const row = { id, email, full_name, department, year, phone, passcode_hash, is_approved: false };
     
     const { error } = await supabase.from('cr_profiles').insert([row]);
     if (error) {

@@ -13,66 +13,43 @@
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
-  isolation: isolate;
-}
-
-/* ── Background Gradient ───────────────────────────────────── */
-.amd-bg-gradient {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background:
+  background-color: #0f0c29;
+  background-image:
     radial-gradient(ellipse 120% 80% at 60% -20%, #312e81 0%, transparent 55%),
     radial-gradient(ellipse 80% 60% at -10% 80%, #1e1b4b 0%, transparent 50%),
     radial-gradient(ellipse 90% 70% at 100% 100%, #4c1d95 0%, transparent 55%),
     linear-gradient(145deg, #0f0c29 0%, #1a1060 40%, #24243e 100%);
+  background-attachment: fixed;
 }
 
-/* ── Floating Orbs ─────────────────────────────────────────── */
-.amd-orbs {
+
+
+/* ── Floating Orbs (Modernized - Static) ────────────────────────── */
+.light-blob-static {
   position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.amd-orb {
-  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: var(--auth-accent, #7c3aed);
+  filter: blur(120px);
+  opacity: 0.15;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.16;
-  animation: amdOrbDrift linear infinite;
+  pointer-events: none;
+  z-index: 1;
 }
 
-.amd-orb-1 {
-  width: 560px; height: 560px;
-  background: radial-gradient(circle, #818cf8 0%, #4f46e5 100%);
-  top: -15%; left: -10%;
-  animation-duration: 24s;
-}
-
-.amd-orb-2 {
-  width: 420px; height: 420px;
-  background: radial-gradient(circle, #a78bfa 0%, #7c3aed 100%);
-  bottom: -10%; right: -10%;
-  animation-duration: 30s;
-  animation-direction: reverse;
-}
-
-.amd-orb-3 {
-  width: 300px; height: 300px;
-  background: radial-gradient(circle, #60a5fa 0%, #2563eb 100%);
-  top: 45%; left: 55%;
-  transform: translateX(-50%);
-  animation-duration: 19s;
-  opacity: 0.1;
-}
-
-@keyframes amdOrbDrift {
-  0%   { transform: translate(0, 0) scale(1); }
-  33%  { transform: translate(40px, -30px) scale(1.06); }
-  66%  { transform: translate(-25px, 20px) scale(0.96); }
-  100% { transform: translate(0, 0) scale(1); }
+.amd-page-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 60%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow:
+    0 12px 28px rgba(99, 102, 241, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  flex-shrink: 0;
 }
 
 /* ── Particle Canvas ───────────────────────────────────────── */
@@ -212,6 +189,12 @@
     0 12px 28px rgba(99, 102, 241, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.12) inset;
   flex-shrink: 0;
+  animation: amdIconPulse 3s ease-in-out infinite;
+}
+
+@keyframes amdIconPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45); }
+  50% { transform: scale(1.05); box-shadow: 0 12px 35px rgba(99, 102, 241, 0.6), 0 0 15px rgba(139, 92, 246, 0.4); }
 }
 
 .amd-page-title {
@@ -239,21 +222,24 @@
 .amd-stat-card {
   flex: 1;
   min-width: 120px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 1.25rem 1.4rem;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  gap: 0.4rem;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .amd-stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 20px rgba(124, 58, 237, 0.1);
 }
 
 .amd-stat-card--approved {
@@ -286,16 +272,17 @@
 
 /* ── Glass Card ────────────────────────────────────────────── */
 .amd-card {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(203, 213, 225, 0.5);
-  border-radius: 22px;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(255, 255, 255, 1);
+  border-radius: 24px;
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
   box-shadow:
-    0 32px 64px -12px rgba(0, 0, 0, 0.4),
-    0 8px 24px -4px rgba(99, 102, 241, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.9);
+    0 40px 80px -15px rgba(0, 0, 0, 0.45),
+    0 10px 30px -5px rgba(99, 102, 241, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 1);
   overflow: hidden;
+  transition: transform 0.3s ease;
 }
 
 /* ── Card Header ───────────────────────────────────────────── */
@@ -410,9 +397,31 @@
 }
 
 .amd-year {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: #64748b;
-  font-weight: 500;
+}
+
+.amd-phone {
+  font-size: 0.85rem;
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+.amd-time {
+  display: flex;
+  flex-direction: column;
+}
+
+.amd-date-val {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.amd-time-val {
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 /* ── Status Badges ─────────────────────────────────────────── */

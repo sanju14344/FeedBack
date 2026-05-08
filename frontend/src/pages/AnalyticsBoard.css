@@ -110,7 +110,7 @@
 /* ── KPI CARDS ── */
 .aw2-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 .aw2-kpi-card {
@@ -230,7 +230,7 @@
 
 /* ── TRENDS + TIMELINE ── */
 .aw2-trends-row {
-  display: grid; grid-template-columns: 1.7fr 1fr; gap: 1rem;
+  display: grid; grid-template-columns: 1fr; gap: 1rem;
 }
 .aw2-timeline-panel { overflow: hidden; }
 .aw2-timeline { display: flex; flex-direction: column; gap: 0; }

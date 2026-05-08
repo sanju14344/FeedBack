@@ -1,10 +1,14 @@
-const { OpenAI } = require('openai');
+const OpenAI = require('openai');
 const vader = require('vader-sentiment');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: '../../.env' }); // Adjusted path to root .env from services/
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 }) : null;
+
+if (!openai) {
+  console.warn("WARNING: OpenAI API Key not found in environment variables.");
+}
 
 // Local sentiment fallback
 function analyzeSentimentLocal(text, starRatings = null) {

@@ -45,7 +45,17 @@ import {
   AlertTriangle,
   Zap,
   Target,
-  Shield
+  Shield,
+  Brain,
+  ArrowLeft,
+  Smile,
+  Meh,
+  Frown,
+  LayoutDashboard,
+  Play,
+  StopCircle,
+  History,
+  BadgeCheck
 } from 'lucide-react';
 import Header from '../components/Header';
 import GlassCard from '../components/GlassCard';
@@ -234,6 +244,73 @@ const renderFormattedFeedback = (text) => {
   );
 };
 
+const PremiumSessionDropdown = ({ sessionHistory, selectedSessionId, onSessionChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = React.useRef(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedSession = sessionHistory.find(s => s.id === selectedSessionId);
+  const triggerText = selectedSessionId === 'all' 
+    ? 'All Sessions' 
+    : (selectedSession?.is_active ? '🔴 Live Session' : `Session ${sessionHistory.length - sessionHistory.indexOf(selectedSession)} (${new Date(selectedSession?.started_at).toLocaleDateString()})`);
+
+  return (
+    <div className="aw2-custom-select-container" ref={dropdownRef}>
+      <div 
+        className={`aw2-custom-select-trigger ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>
+          {triggerText}
+        </span>
+        <ChevronDown size={14} style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }} />
+      </div>
+      
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            className="aw2-custom-select-options"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+          >
+            <div 
+              className={`aw2-custom-select-option ${selectedSessionId === 'all' ? 'selected' : ''}`}
+              onClick={() => { onSessionChange({ target: { value: 'all' } }); setIsOpen(false); }}
+            >
+              <div className="aw2-option-icon past" />
+              All Sessions
+            </div>
+            {sessionHistory.map((s, i) => (
+              <div 
+                key={s.id}
+                className={`aw2-custom-select-option ${selectedSessionId === s.id ? 'selected' : ''}`}
+                onClick={() => { onSessionChange({ target: { value: s.id } }); setIsOpen(false); }}
+              >
+                <div className={`aw2-option-icon ${s.is_active ? 'active' : 'past'}`} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 600 }}>{s.is_active ? '🔴 Live Session' : `Session ${sessionHistory.length - i}`}</span>
+                  {!s.is_active && <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{new Date(s.started_at).toLocaleDateString()}</span>}
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export default function Dashboard({ theme, toggleTheme }) {
   const navigate = useNavigate();
   const isMobile = useMobile();
@@ -262,6 +339,8 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [selectedSessionId, setSelectedSessionId] = useState('all');
   const [sessionLoading, setSessionLoading] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [liveFeedback, setLiveFeedback] = useState([]);
+  const [liveInsights, setLiveInsights] = useState(null);
   // Legacy Manage tab inline staff edit state
   const [editStaff, setEditStaff] = useState({ id: null, name: '' });
 
@@ -308,6 +387,24 @@ export default function Dashboard({ theme, toggleTheme }) {
     }
   }, [actions]);
 
+  useEffect(() => {
+    if (!profile?.dept_id) return;
+
+    const targetSessionId = session ? session.id : (sessionHistory?.length > 0 ? sessionHistory[0].id : null);
+
+    if (targetSessionId) {
+      getFeedbackLogs(profile.dept_id, targetSessionId, profile.year)
+        .then(res => setLiveFeedback(res.data || []))
+        .catch(console.error);
+      getInsights(profile.dept_id, targetSessionId, profile.year)
+        .then(res => setLiveInsights(res.data || null))
+        .catch(console.error);
+    } else {
+      setLiveFeedback([]);
+      setLiveInsights(null);
+    }
+  }, [session, sessionHistory, profile?.dept_id]);
+
   const fetchData = async (uid) => {
     setLoading(true);
     try {
@@ -324,7 +421,7 @@ export default function Dashboard({ theme, toggleTheme }) {
             setProfile(prev => ({ ...prev, dept_id: myDept.id }));
             const [staffRes, subRes, sessionRes, historyRes] = await Promise.all([
               getStaff(myDept.id),
-              getSubjects(myDept.id),
+              getSubjects(myDept.id, prof.year),
               getSessionStatus(myDept.id),
               getSessionHistory(myDept.id)
             ]);
@@ -347,9 +444,13 @@ export default function Dashboard({ theme, toggleTheme }) {
           console.error("Error fetching management data:", e);
         }
 
-        handleGetInsights(prof.department, defId === 'all' ? '' : defId);
-        const fbRes = await getFeedbackLogs(prof.department, defId === 'all' ? '' : defId);
-        setFeedback(fbRes.data);
+        // Use the resolved myDept.id for precise querying
+        const targetDeptId = deptsRes?.data?.find(d => d.name === prof.department)?.id;
+        if (targetDeptId) {
+          handleGetInsights(targetDeptId, defId === 'all' ? '' : defId, prof.year);
+          const fbRes = await getFeedbackLogs(targetDeptId, defId === 'all' ? '' : defId, prof.year);
+          setFeedback(fbRes.data);
+        }
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -361,21 +462,21 @@ export default function Dashboard({ theme, toggleTheme }) {
   const handleSessionChange = async (e) => {
     const newId = e.target.value;
     setSelectedSessionId(newId);
-    if (!profile?.department) return;
+    if (!profile?.dept_id) return;
     
     setIsRefreshing(true);
     try {
-      handleGetInsights(profile.department, newId === 'all' ? '' : newId);
-      const fbRes = await getFeedbackLogs(profile.department, newId === 'all' ? '' : newId);
+      handleGetInsights(profile.dept_id, newId === 'all' ? '' : newId, profile.year);
+      const fbRes = await getFeedbackLogs(profile.dept_id, newId === 'all' ? '' : newId, profile.year);
       setFeedback(fbRes.data);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const handleGetInsights = async (dept, sessionId = '') => {
+  const handleGetInsights = async (deptId, sessionId = '', year = '') => {
     try {
-      const insightRes = await getInsights(dept, sessionId);
+      const insightRes = await getInsights(deptId, sessionId, year);
       setInsights(insightRes.data);
     } catch (err) {
       console.error("Error fetching insights:", err);
@@ -439,7 +540,7 @@ export default function Dashboard({ theme, toggleTheme }) {
       setNewEntry({ subject: '', staff: '' });
       const [staffRes, subRes] = await Promise.all([
         getStaff(profile.dept_id),
-        getSubjects(profile.dept_id)
+        getSubjects(profile.dept_id, profile.year)
       ]);
       setStaff(staffRes.data);
       setSubjects(subRes.data);
@@ -506,7 +607,7 @@ export default function Dashboard({ theme, toggleTheme }) {
     try {
       const [staffRes, subRes] = await Promise.all([
         getStaff(profile.dept_id),
-        getSubjects(profile.dept_id)
+        getSubjects(profile.dept_id, profile.year)
       ]);
       setStaff(staffRes.data);
       setSubjects(subRes.data);
@@ -537,8 +638,8 @@ export default function Dashboard({ theme, toggleTheme }) {
     if (!profile?.dept_id) return;
     setSessionLoading(true);
     // Capture summary snapshot before ending
-    const posCount = feedback.filter(f => f.sentiment_label === 'Positive').length;
-    const negCount = feedback.filter(f => f.sentiment_label === 'Negative').length;
+    const posCount = liveFeedback.filter(f => f.sentiment_label === 'Positive').length;
+    const negCount = liveFeedback.filter(f => f.sentiment_label === 'Negative').length;
     const dominant = posCount > negCount ? 'Positive' : negCount > posCount ? 'Negative' : 'Neutral';
     const sessionDuration = session?.started_at
       ? Math.round((Date.now() - new Date(session.started_at).getTime()) / 60000)
@@ -552,13 +653,13 @@ export default function Dashboard({ theme, toggleTheme }) {
       setSessionHistory(histRes.data || []);
       setSessionEndSummary({
         duration: sessionDuration,
-        studentCount: lastSes?.student_count ?? 'â€”',
+        studentCount: lastSes?.student_count ?? '—',
         dominant,
-        topComplaint: insights?.top_complaint_phrases?.[0] || null,
-        satisfaction: insights?.satisfaction_score || 0,
+        topComplaint: liveInsights?.top_complaint_phrases?.[0] || null,
+        satisfaction: liveInsights?.satisfaction_score || 0,
         posCount,
         negCount,
-        totalFeedback: feedback.length
+        totalFeedback: liveFeedback.length
       });
       setShowSessionSummary(true);
     } catch (err) {
@@ -582,14 +683,14 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   const handleChatSubmit = async (e) => {
     e.preventDefault();
-    if (!chatInput.trim() || !profile?.department) return;
+    if (!chatInput.trim() || !profile?.dept_id) return;
     const msg = chatInput.trim();
     setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
     setChatInput('');
     setIsChatTyping(true);
 
     try {
-      const res = await sendChatQuery(profile.department, selectedSessionId === 'all' ? '' : selectedSessionId, msg);
+      const res = await sendChatQuery(profile.dept_id, selectedSessionId === 'all' ? '' : selectedSessionId, msg, profile.year);
       setChatMessages(prev => [...prev, { role: 'ai', text: res.data.response }]);
     } catch (err) {
       setChatMessages(prev => [...prev, { role: 'ai', text: "Sorry, I couldn't process that right now." }]);
@@ -637,43 +738,68 @@ export default function Dashboard({ theme, toggleTheme }) {
             transition={{ duration: isMobile ? 0.2 : 0.3 }}
             className="aw2"
           >
-            {/* â•â•â•â•â•â•â•â•â•â• COMMAND BAR â•â•â•â•â•â•â•â•â•â• */}
-            <div className="aw2-command-bar">
-              <div className="aw2-cb-left">
-                <div className="aw2-title-row">
-                  <div className="aw2-title-icon"><BarChart3 size={22}/></div>
+            {/* ══════════ PREMIUM COMMAND BAR ══════════ */}
+            <div className="aw2-premium-command-bar">
+              {/* Top row: CR profile + actions */}
+              <div className="aw2-pcb-top">
+                <div className="aw2-pcb-profile">
+                  <div className="aw2-pcb-avatar">
+                    {(profile?.full_name || 'CR').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="aw2-pcb-info">
+                    <span className="aw2-pcb-name">{profile?.full_name || 'Class Representative'}</span>
+                    <span className="aw2-pcb-context">{profile?.year} Year · {profile?.department}</span>
+                  </div>
+                  {session
+                    ? <span className="aw2-session-live-badge"><span className="aw2-live-dot"/>🟢 LIVE SESSION</span>
+                    : <span className="aw2-session-idle-badge">⚪ IDLE</span>
+                  }
+                </div>
+                <div className="aw2-pcb-actions">
+                  <span className="aw2-sync-chip">
+                    <RefreshCw size={11} className={isAnalyzing ? 'spin' : ''}/>
+                    {lastUpdated.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                  </span>
+                  <PremiumSessionDropdown 
+                    sessionHistory={sessionHistory}
+                    selectedSessionId={selectedSessionId}
+                    onSessionChange={handleSessionChange}
+                  />
+                  <button className="aw2-pdf-btn" onClick={() => setPdfConfirm({ type: 'full' })}>
+                    <FileText size={15}/> Export Report
+                  </button>
+                </div>
+              </div>
+              {/* Bottom row: Dashboard title + health mini */}
+              <div className="aw2-pcb-title-row">
+                <div className="aw2-pcb-title-group">
+                  <div className="aw2-title-icon"><LayoutDashboard size={20}/></div>
                   <div>
-                    <h2 className="aw2-title">Department Analytics</h2>
+                    <h2 className="aw2-title">Analytics Command Center</h2>
                     <p className="aw2-subtitle">
-                      Real-time intelligence &middot; <span className="aw2-dept">{profile?.department}</span>
+                      Real-time intelligence · <span className="aw2-dept">{profile?.department}</span>
+                      {profile?.is_approved && (
+                        <span className="verified-badge-inline" title="Verified CR">
+                          <CheckCircle2 size={12} fill="var(--auth-accent)" color="#fff" />
+                          Verified
+                        </span>
+                      )}
                       {session && <span className="aw2-live-pill"><span className="aw2-live-dot"/>LIVE</span>}
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="aw2-cb-right">
-                <select
-                  className="aw2-session-select"
-                  value={selectedSessionId}
-                  onChange={handleSessionChange}
-                >
-                  <option value="all">All Sessions</option>
-                  {sessionHistory.map((s, i) => (
-                    <option key={s.id} value={s.id}>
-                      {s.is_active ? 'Live Session' : `Session ${sessionHistory.length - i} (${new Date(s.started_at).toLocaleDateString()})`}
-                    </option>
-                  ))}
-                </select>
-                <span className="aw2-sync-chip">
-                  <RefreshCw size={11} className={isAnalyzing ? 'spin' : ''}/>{lastUpdated.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
-                </span>
-                <button className="aw2-pdf-btn" onClick={() => setPdfConfirm({ type: 'full' })}>
-                  <FileText size={15}/> Export PDF
-                </button>
+                <div className="aw2-pcb-health-mini">
+                  <div className="aw2-phm-score" style={{
+                    color: (insights?.class_health_score||0) >= 75 ? '#10b981' : (insights?.class_health_score||0) >= 50 ? '#f59e0b' : '#ef4444'
+                  }}>
+                    {insights?.class_health_score || '--'}
+                  </div>
+                  <div className="aw2-phm-label">Class Health</div>
+                </div>
               </div>
             </div>
 
-            {/* â•â•â•â•â•â•â•â•â•â• KPI CARDS â•â•â•â•â•â•â•â•â•â• */}
+            {/* ══════════ KPI CARDS ══════════ */}
             {(() => {
               const sparkFb  = getTrendData(feedback);
               const sentTrnd = getSentimentTrend(feedback);
@@ -782,10 +908,6 @@ export default function Dashboard({ theme, toggleTheme }) {
                     )}
                   </div>
                 </div>
-                <div className="aw2-trend-story">
-                  <div className="aw2-ts-hdr"><Sparkles size={13}/><strong>AI Trend Story</strong></div>
-                  <p>{insights?.trend_story || 'Gathering more data for trend analysis...'}</p>
-                </div>
               </div>
             </div>
 
@@ -799,85 +921,10 @@ export default function Dashboard({ theme, toggleTheme }) {
                   isMobile={isMobile}
                 />
               </Suspense>
-              <div className="aw2-panel aw2-timeline-panel">
-                <div className="aw2-panel-hdr"><Clock size={18}/><span>Action Timeline</span></div>
-                <div className="aw2-timeline">
-                  {actions.slice(0,5).map(action => (
-                    <div key={action.id} className="aw2-te">
-                      <div className="aw2-te-dot"/>
-                      <div className="aw2-te-body">
-                        <span className="aw2-te-date">{new Date(action.date).toLocaleDateString()}</span>
-                        <p className={action.completed ? 'aw2-te-done' : ''}>{action.text}</p>
-                        {action.priority && <span className={`aw2-te-pri p-${action.priority.toLowerCase()}`}>{action.priority}</span>}
-                      </div>
-                    </div>
-                  ))}
-                  {actions.length === 0 && <p className="aw2-te-empty">No actions tracked yet.</p>}
-                </div>
-              </div>
             </div>
 
             {/* â•â•â•â•â•â•â•â•â•â• SUBJECT PERFORMANCE GRID â•â•â•â•â•â•â•â•â•â• */}
-            <div className="aw2-subject-section">
-              <div className="aw2-section-hdr">
-                <h3 className="aw2-section-title"><PieIcon size={18}/> Subject Performance</h3>
-                <span className="aw2-count-badge">{subjects.length} Subjects</span>
-              </div>
-              <div className="aw2-subject-grid">
-                {subjects.map((sub, idx) => {
-                  const subFeedback    = feedback.filter(f => f.subject_id === sub.id);
-                  const posCount       = subFeedback.filter(f => f.sentiment_label === 'Positive').length;
-                  const negCount       = subFeedback.filter(f => f.sentiment_label === 'Negative').length;
-                  const neuCount       = subFeedback.filter(f => f.sentiment_label === 'Neutral').length;
-                  const score          = subFeedback.length > 0 ? Math.round((posCount / subFeedback.length) * 100) : 0;
-                  const assignedFaculty = staff.find(s => s.subject_id === sub.id);
-                  const hClass         = score >= 75 ? 'healthy' : score >= 50 ? 'moderate' : 'critical';
-                  const hColor         = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-                  return (
-                    <motion.div
-                      key={sub.id}
-                      className={`aw2-sub-card aw2-sub-${hClass} ${expandedSubject===sub.id?'expanded':''}`}
-                      style={{ '--sub-color': hColor }}
-                      onClick={() => setExpandedSubject(expandedSubject===sub.id ? null : sub.id)}
-                      whileHover={isMobile ? {} : { y:-5 }}
-                      initial={isMobile ? {opacity:0} : {opacity:0,y:20}}
-                      animate={isMobile ? {opacity:1} : {opacity:1,y:0}}
-                      transition={isMobile ? {duration:0.2} : {delay:idx*0.06}}
-                    >
-                      <div className="aw2-sc-top">
-                        <div className="aw2-sc-info">
-                          <h4>{sub.name}</h4>
-                          <span className="aw2-sc-faculty"><User size={11}/> {assignedFaculty?.name || 'Faculty'}</span>
-                          <span className="aw2-sc-count">{subFeedback.length} responses</span>
-                        </div>
-                        <CircularProgress score={score} size={60}/>
-                      </div>
-                      <div className="aw2-sc-bar-wrap">
-                        {subFeedback.length > 0 && (
-                          <div className="aw2-sc-bar">
-                            <div className="aw2-sc-fill aw2-sc-pos" style={{width:`${(posCount/subFeedback.length)*100}%`}}/>
-                            <div className="aw2-sc-fill aw2-sc-neu" style={{width:`${(neuCount/subFeedback.length)*100}%`}}/>
-                            <div className="aw2-sc-fill aw2-sc-neg" style={{width:`${(negCount/subFeedback.length)*100}%`}}/>
-                          </div>
-                        )}
-                      </div>
-                      {expandedSubject === sub.id && (
-                        <motion.div initial={{opacity:0}} animate={{opacity:1}} className="aw2-sc-detail">
-                          <div className="aw2-sc-metrics">
-                            <div className="aw2-scm"><span>Positive</span><label style={{color:'#10b981'}}>{posCount}</label></div>
-                            <div className="aw2-scm"><span>Neutral</span><label style={{color:'#f59e0b'}}>{neuCount}</label></div>
-                            <div className="aw2-scm"><span>Negative</span><label style={{color:'#ef4444'}}>{negCount}</label></div>
-                          </div>
-                          {subFeedback[0]?.feedback_text && (
-                            <p className="aw2-sc-quote">"{subFeedback[0].feedback_text.substring(0,70)}..."</p>
-                          )}
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
+
 
             {/* â•â•â•â•â•â•â•â•â•â• ALERTS â•â•â•â•â•â•â•â•â•â• */}
             {(() => {
@@ -911,80 +958,6 @@ export default function Dashboard({ theme, toggleTheme }) {
               );
             })()}
 
-            {/* â•â•â•â•â•â•â•â•â•â• KEYWORDS + ACTION CENTER â•â•â•â•â•â•â•â•â•â• */}
-            <div className="aw2-bottom-grid">
-              {/* Keywords */}
-              <div className="aw2-panel aw2-keywords-panel">
-                <div className="aw2-panel-hdr"><Terminal size={18}/><span>Top Sentiment Phrases</span></div>
-                <div className="aw2-tag-cloud">
-                  {insights?.top_compliment_phrases?.map((p,i) => (
-                    <motion.span key={i} className="aw2-tag aw2-tag-pos" whileHover={{scale:1.06}}>{p}</motion.span>
-                  ))}
-                  {insights?.top_complaint_phrases?.map((p,i) => (
-                    <motion.span key={i} className="aw2-tag aw2-tag-neg" whileHover={{scale:1.06}}>{p}</motion.span>
-                  ))}
-                  {!insights?.top_compliment_phrases?.length && !insights?.top_complaint_phrases?.length && (
-                    <p className="aw2-empty-tags">Phrases will appear after feedback is collected</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Center */}
-              <div className="aw2-panel aw2-actions-panel">
-                <div className="aw2-panel-hdr">
-                  <ListTodo size={18}/><span>CR Action Center</span>
-                  <span className="aw2-pending-badge">{actions.filter(a=>!a.completed).length} pending</span>
-                </div>
-                <div className="aw2-action-input-area">
-                  <div className="aw2-action-row">
-                    <input
-                      className="aw2-action-input"
-                      type="text"
-                      placeholder="Add an action item..."
-                      value={newActionText}
-                      onChange={e=>setNewActionText(e.target.value)}
-                      onKeyDown={e=>e.key==='Enter'&&handleAddAction()}
-                    />
-                    <button className="aw2-action-add" onClick={handleAddAction}><PlusCircle size={18}/></button>
-                  </div>
-                  <div className="aw2-action-meta">
-                    <select className="aw2-action-select" value={actionPriority} onChange={e=>setActionPriority(e.target.value)}>
-                      <option value="High">ðŸ”´ High</option>
-                      <option value="Medium">ðŸŸ¡ Medium</option>
-                      <option value="Low">ðŸŸ¢ Low</option>
-                    </select>
-                    <select className="aw2-action-select" value={actionSubjectTag} onChange={e=>setActionSubjectTag(e.target.value)}>
-                      <option value="">No subject tag</option>
-                      {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="aw2-action-list">
-                  <AnimatePresence>
-                    {actions.map(action => (
-                      <motion.div key={action.id} layout
-                        className={`aw2-action-item ${action.completed?'done':''}`}
-                        initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,height:0}}
-                      >
-                        <div className="aw2-ai-chk" onClick={()=>toggleAction(action.id)}>
-                          {action.completed ? <CheckCircle2 size={16} color="#10b981"/> : <div className="aw2-chk-box"/>}
-                        </div>
-                        <div className="aw2-ai-body">
-                          <span className="aw2-ai-txt">{action.text}</span>
-                          <div className="aw2-ai-tags">
-                            {action.priority && <span className={`aw2-pri-tag p-${action.priority.toLowerCase()}`}>{action.priority}</span>}
-                            {action.subjectTag && <span className="aw2-sub-tag">{action.subjectTag}</span>}
-                          </div>
-                        </div>
-                        <button className="aw2-ai-del" onClick={()=>deleteAction(action.id)}><Trash2 size={12}/></button>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                  {actions.length===0 && <p className="aw2-no-actions">No actions yet. Add your first resolution above.</p>}
-                </div>
-              </div>
-            </div>
-
           </motion.div>
         )}
 
@@ -994,36 +967,20 @@ export default function Dashboard({ theme, toggleTheme }) {
             animate={{ opacity: 1 }}
             className="feedback-subject-list-workspace"
           >
-            <div className="fsl-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="aw2-section-hdr" style={{ marginBottom: '1.5rem' }}>
               <div>
-                <h2 className="workspace-title">Feedback by Subject</h2>
-                <p className="workspace-sub">Tap a subject to view all its student feedback</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <select 
-                    className="session-selector" 
-                    value={selectedSessionId} 
-                    onChange={handleSessionChange}
-                    style={{ padding: '6px 10px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', fontSize: '0.8rem', marginRight: '8px' }}
-                  >
-                    <option value="all" style={{ color: '#000' }}>All Sessions</option>
-                    {sessionHistory.map((s, i) => (
-                      <option key={s.id} value={s.id} style={{ color: '#000' }}>
-                        {s.is_active ? 'Live Session' : `Session ${sessionHistory.length - i} (${new Date(s.started_at).toLocaleDateString()})`}
-                      </option>
-                    ))}
-                  </select>
-                  {session && <span className="session-live-badge" style={{ padding: '6px 12px', fontSize: '0.75rem' }}><span className="slb-dot"/>LIVE SESSION</span>}
+                <h2 className="workspace-title">Subject Performance Tracker</h2>
+                <p className="workspace-sub">Deep dive into student feedback across all subjects</p>
               </div>
             </div>
 
             {subjects.length === 0 ? (
-              <div className="empty-explorer">
-                <Activity size={48} opacity={0.2} />
+              <div className="empty-history">
+                <BookOpen size={48} opacity={0.2} />
                 <p>No subjects found for your department.</p>
               </div>
             ) : (
-              <div className="fsl-list">
+              <div className="aw2-subject-grid">
                 {subjects.map((sub, idx) => {
                   const subFeedback = feedback.filter(f => f.subject_id === sub.id);
                   const posCount = subFeedback.filter(f => f.sentiment_label === 'Positive').length;
@@ -1031,49 +988,52 @@ export default function Dashboard({ theme, toggleTheme }) {
                   const neuCount = subFeedback.filter(f => f.sentiment_label === 'Neutral').length;
                   const score = subFeedback.length > 0 ? Math.round((posCount / subFeedback.length) * 100) : null;
                   const assignedStaff = staff.find(s => s.subject_id === sub.id);
+                  
+                  const subColor = score >= 75 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : score !== null ? 'var(--error)' : 'var(--glass-border)';
 
                   return (
                     <motion.div
                       key={sub.id}
-                      className="fsl-row"
-                      initial={isMobile ? { opacity: 0 } : { opacity: 0, x: -20 }}
-                      animate={isMobile ? { opacity: 1 } : { opacity: 1, x: 0 }}
-                      transition={isMobile ? { duration: 0.2 } : { delay: idx * 0.07 }}
+                      className="aw2-sub-card"
+                      style={{ '--sub-color': subColor }}
+                      initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 15 }}
+                      animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
                       onClick={() => setSelectedSubject(sub)}
-                      whileHover={isMobile ? {} : { x: 4 }}
+                      whileHover={{ y: -4 }}
                     >
-                      <div className="fsl-rank">{String(idx + 1).padStart(2, '0')}</div>
-
-                      <div className="fsl-subject-icon">
-                        <BookOpen size={20} />
-                      </div>
-
-                      <div className="fsl-subject-info">
-                        <h3 className="fsl-subject-name">{sub.name}</h3>
-                        <span className="fsl-staff-name">
-                          <User size={12} /> {assignedStaff?.name || 'Department Faculty'}
-                        </span>
-                      </div>
-
-                      <div className="fsl-chips">
-                        <span className="fsl-chip chip-pos"><CheckCircle2 size={11} /> {posCount} Pos</span>
-                        <span className="fsl-chip chip-neu"><Minus size={11} /> {neuCount} Neu</span>
-                        <span className="fsl-chip chip-neg"><AlertCircle size={11} /> {negCount} Neg</span>
-                      </div>
-
-                      <div className="fsl-score-col">
+                      <div className="aw2-sc-top">
+                        <div className="aw2-sc-info">
+                          <h4>{sub.name}</h4>
+                          <span className="aw2-sc-faculty"><User size={12}/> {assignedStaff?.name || 'Unassigned'}</span>
+                          <span className="aw2-sc-count">{subFeedback.length} responses</span>
+                        </div>
                         {score !== null ? (
-                          <span className={`fsl-score ${score >= 75 ? 'good' : score >= 50 ? 'mid' : 'bad'}`}>
+                          <div className={`aw2-health-badge ${score >= 75 ? 'healthy' : score >= 50 ? 'moderate' : 'critical'}`}>
                             {score}%
-                          </span>
+                          </div>
                         ) : (
-                          <span className="fsl-score no-data">â€”</span>
+                          <div className="aw2-health-badge evaluating">N/A</div>
                         )}
-                        <span className="fsl-fb-count">{subFeedback.length} responses</span>
                       </div>
 
-                      <div className="fsl-arrow">
-                        <ChevronDown size={20} style={{ transform: 'rotate(-90deg)' }} />
+                      <div className="aw2-sc-bar-wrap">
+                        <div className="aw2-sc-bar">
+                          <motion.div className="aw2-sc-fill aw2-sc-pos" initial={{width:0}} animate={{width:`${subFeedback.length ? (posCount/subFeedback.length)*100 : 0}%`}} />
+                          <motion.div className="aw2-sc-fill aw2-sc-neu" initial={{width:0}} animate={{width:`${subFeedback.length ? (neuCount/subFeedback.length)*100 : 0}%`}} />
+                          <motion.div className="aw2-sc-fill aw2-sc-neg" initial={{width:0}} animate={{width:`${subFeedback.length ? (negCount/subFeedback.length)*100 : 0}%`}} />
+                        </div>
+                      </div>
+
+                      <div className="aw2-sc-detail">
+                        <div className="aw2-sc-metrics">
+                          <div className="aw2-scm"><span>Pos</span><label style={{color:'var(--success)'}}>{posCount}</label></div>
+                          <div className="aw2-scm"><span>Neu</span><label style={{color:'var(--warning)'}}>{neuCount}</label></div>
+                          <div className="aw2-scm"><span>Neg</span><label style={{color:'var(--error)'}}>{negCount}</label></div>
+                        </div>
+                        {subFeedback.length > 0 && subFeedback[0].feedback_text && (
+                          <p className="aw2-sc-quote">"{subFeedback[0].feedback_text.substring(0, 60)}..."</p>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -1091,6 +1051,9 @@ export default function Dashboard({ theme, toggleTheme }) {
                   renderFormattedFeedback={renderFormattedFeedback}
                   profile={profile}
                   staff={staff}
+                  sessionHistory={sessionHistory}
+                  selectedSessionId={selectedSessionId}
+                  handleSessionChange={handleSessionChange}
                 />
               )}
             </AnimatePresence>
@@ -1329,67 +1292,126 @@ export default function Dashboard({ theme, toggleTheme }) {
             animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0 }}
             transition={{ duration: isMobile ? 0.2 : 0.3 }}
           >
-            <div className="admin-header" style={{ marginBottom: '2rem' }}>
-              <div className="ah-left">
-                <h2 className="workspace-title">Session Control</h2>
-                <p className="workspace-sub">Manage when students can submit feedback for {profile?.department}</p>
+            {/* Header */}
+            <div className="session-tab-header">
+              <div>
+                <h2 className="workspace-title">Session Control Center</h2>
+                <p className="workspace-sub">Manage live feedback windows for <strong>{profile?.department}</strong></p>
               </div>
+              <span className={`st-status-badge ${session ? 'live' : 'idle'}`}>
+                <span className="st-status-dot" />
+                {session ? '🟢 SESSION LIVE' : '⚪ SESSION IDLE'}
+                {profile?.is_approved && <span className="verified-cr-pill-small"><BadgeCheck size={12}/> VERIFIED CR</span>}
+              </span>
             </div>
 
-            <GlassCard className="session-intel-card">
-              <div className="sic-header">
-                <div className="sic-icon"><Zap size={20}/></div>
-                <div>
-                  <h4>Session Intelligence</h4>
-                  <span className="sic-sub">Live analytics for {profile?.department}</span>
+            {/* Intelligence Grid */}
+            <div className="st-intelligence-grid">
+              {/* Mood Meter */}
+              <GlassCard className="st-mood-card">
+                <div className="st-card-header">
+                  <div className="st-card-icon"><Activity size={18}/></div>
+                  <div>
+                    <h4>{session ? 'Live Mood Meter' : 'Latest Mood Meter'}</h4>
+                    <span>{session ? 'Real-time sentiment snapshot' : 'Final sentiment snapshot'}</span>
+                  </div>
                 </div>
-                <span className={`session-status-badge sic-badge ${session?'live':'offline'}`}>
-                  <span className="status-dot"/>{session?'LIVE':'IDLE'}
-                </span>
-              </div>
-              <div className="sic-stats">
-                <div className="sic-stat">
-                  <span className="sic-stat-label">Total Feedback</span>
-                  <span className="sic-stat-val">{feedback.length}</span>
-                </div>
-                <div className="sic-stat">
-                  <span className="sic-stat-label">Positive</span>
-                  <span className="sic-stat-val text-success">{feedback.filter(f=>f.sentiment_label==='Positive').length}</span>
-                </div>
-                <div className="sic-stat">
-                  <span className="sic-stat-label">Negative</span>
-                  <span className="sic-stat-val text-error">{feedback.filter(f=>f.sentiment_label==='Negative').length}</span>
-                </div>
-                <div className="sic-stat">
-                  <span className="sic-stat-label">Satisfaction</span>
-                  <span className="sic-stat-val text-primary">{insights?.satisfaction_score??'--'}%</span>
-                </div>
-              </div>
-              {session && <p className="sic-started"><Clock size={12}/> Session started: {new Date(session.started_at).toLocaleString()}</p>}
-            </GlassCard>
+                {(() => {
+                  const pos = liveFeedback.filter(f => f.sentiment_label === 'Positive').length;
+                  const neg = liveFeedback.filter(f => f.sentiment_label === 'Negative').length;
+                  const neu = liveFeedback.length - pos - neg;
+                  const total = liveFeedback.length || 1;
+                  return (
+                    <div className="st-mood-body">
+                      <div className="st-mood-items">
+                        <div className="st-mood-item st-mood-pos">
+                          <Smile size={24}/>
+                          <span className="st-mood-pct">{Math.round((pos/total)*100)}%</span>
+                          <span className="st-mood-label">Positive</span>
+                          <span className="st-mood-count">{pos}</span>
+                        </div>
+                        <div className="st-mood-item st-mood-neu">
+                          <Meh size={24}/>
+                          <span className="st-mood-pct">{Math.round((neu/total)*100)}%</span>
+                          <span className="st-mood-label">Neutral</span>
+                          <span className="st-mood-count">{neu}</span>
+                        </div>
+                        <div className="st-mood-item st-mood-neg">
+                          <Frown size={24}/>
+                          <span className="st-mood-pct">{Math.round((neg/total)*100)}%</span>
+                          <span className="st-mood-label">Negative</span>
+                          <span className="st-mood-count">{neg}</span>
+                        </div>
+                      </div>
+                      <div className="st-mood-bar">
+                        <motion.div className="st-mf-pos" style={{width:`${(pos/total)*100}%`}}
+                          initial={{width:0}} animate={{width:`${(pos/total)*100}%`}} transition={{duration:0.8}}/>
+                        <motion.div className="st-mf-neu" style={{width:`${(neu/total)*100}%`}}
+                          initial={{width:0}} animate={{width:`${(neu/total)*100}%`}} transition={{duration:0.8,delay:0.1}}/>
+                        <motion.div className="st-mf-neg" style={{width:`${(neg/total)*100}%`}}
+                          initial={{width:0}} animate={{width:`${(neg/total)*100}%`}} transition={{duration:0.8,delay:0.2}}/>
+                      </div>
+                      <div className="st-mood-total">{liveFeedback.length} total responses collected</div>
+                    </div>
+                  );
+                })()}
+              </GlassCard>
 
-            <GlassCard className="session-control-card">
-              <div className="session-status-area">
-                <div className={`session-status-badge ${session ? 'live' : 'offline'}`}>
+              {/* Session Stats */}
+              <GlassCard className="st-stats-card">
+                <div className="st-card-header">
+                  <div className="st-card-icon"><Zap size={18}/></div>
+                  <div>
+                    <h4>Session Intelligence</h4>
+                    <span>{session ? 'Live analytics' : 'Latest session analytics'} · {profile?.department}</span>
+                  </div>
+                </div>
+                <div className="sic-stats">
+                  <div className="sic-stat">
+                    <span className="sic-stat-label">Total Feedback</span>
+                    <span className="sic-stat-val">{liveFeedback.length}</span>
+                  </div>
+                  <div className="sic-stat">
+                    <span className="sic-stat-label">Positive</span>
+                    <span className="sic-stat-val text-success">{liveFeedback.filter(f=>f.sentiment_label==='Positive').length}</span>
+                  </div>
+                  <div className="sic-stat">
+                    <span className="sic-stat-label">Negative</span>
+                    <span className="sic-stat-val text-error">{liveFeedback.filter(f=>f.sentiment_label==='Negative').length}</span>
+                  </div>
+                  <div className="sic-stat">
+                    <span className="sic-stat-label">Satisfaction</span>
+                    <span className="sic-stat-val text-primary">{liveInsights?.satisfaction_score??'--'}%</span>
+                  </div>
+                </div>
+                {session && <p className="sic-started"><Clock size={12}/> Started: {new Date(session.started_at).toLocaleString()}</p>}
+              </GlassCard>
+            </div>
+
+            {/* Session Control */}
+            <GlassCard className="session-control-card-premium">
+              <div className="sccp-left">
+                <div className={`sccp-status ${session ? 'live' : 'idle'}`}>
                   <div className="status-dot"></div>
-                  {session ? 'Session is LIVE' : 'No active session'}
+                  <div>
+                    <span className="sccp-status-text">{session ? 'Session is LIVE' : 'No Active Session'}</span>
+                    <span className="sccp-status-sub">
+                      {session
+                        ? `Students can submit feedback · Started ${new Date(session.started_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`
+                        : 'Start a session to enable student feedback submission'}
+                    </span>
+                  </div>
                 </div>
-                {session && (
-                  <p className="session-started-time">
-                    Started at: {new Date(session.started_at).toLocaleString()}
-                  </p>
-                )}
               </div>
-
-              <div className="session-actions">
+              <div className="sccp-right">
                 {!session ? (
                   <Button 
                     variant="primary" 
                     className="btn-start-session"
+                    icon={sessionLoading ? <div className="loading-spinner-small" /> : <Play size={18} />}
                     onClick={handleStartSession}
                     disabled={sessionLoading}
                   >
-                    {sessionLoading ? <div className="loading-spinner-small" /> : <Calendar size={18} />}
                     Start New Session
                   </Button>
                 ) : (
@@ -1397,11 +1419,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                     <Button 
                       variant="danger" 
                       className="btn-end-session"
+                      icon={<StopCircle size={18} />}
                       onClick={() => setShowEndConfirm(true)}
                     >
-                      <X size={18} /> End Current Session
+                      End Session
                     </Button>
-
                     {showEndConfirm && (
                       <div className="end-session-confirm">
                         <p>Are you sure? Students will no longer be able to submit feedback.</p>
@@ -1418,34 +1440,55 @@ export default function Dashboard({ theme, toggleTheme }) {
               </div>
             </GlassCard>
 
+            {/* Session History */}
             <div className="session-history-container">
-              <h3 className="history-title">Session History</h3>
+              <div className="history-header-row">
+                <History size={18}/>
+                <h3 className="history-title">Session History</h3>
+                <span className="history-count-badge">{sessionHistory.length} sessions</span>
+              </div>
               {sessionHistory.length === 0 ? (
-                <div className="empty-history">No past sessions found.</div>
+                <div className="empty-history">
+                  <Calendar size={32} opacity={0.2}/>
+                  <p>No past sessions found. Start your first session above.</p>
+                </div>
               ) : (
                 <div className="history-list">
-                  {sessionHistory.map(hist => (
-                    <div key={hist.id} className="history-card">
-                      <div className="hc-left">
-                        <div className={`hc-status ${hist.is_active ? 'active' : 'ended'}`}>
+                  {sessionHistory.map((hist, idx) => {
+                    const dur = hist.ended_at
+                      ? Math.round((new Date(hist.ended_at) - new Date(hist.started_at)) / 60000)
+                      : null;
+                    return (
+                      <motion.div
+                        key={hist.id}
+                        className="history-card-premium"
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.06 }}
+                      >
+                        <div className="hcp-icon">
+                          {hist.is_active ? <Zap size={18} color="#10b981"/> : <CheckCircle2 size={18} opacity={0.5}/>}
+                        </div>
+                        <div className="hcp-info">
+                          <span className="hcp-name">Session {sessionHistory.length - idx}</span>
+                          <span className="hcp-date">
+                            {new Date(hist.started_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'})}
+                            {hist.ended_at && ` · ${dur}m duration`}
+                          </span>
+                        </div>
+                        <div className="hcp-stats">
+                          <div className="hcp-stat">
+                            <Users size={14}/>
+                            <strong>{hist.student_count ?? '—'}</strong>
+                            <span>students</span>
+                          </div>
+                        </div>
+                        <div className={`hcp-badge ${hist.is_active ? 'active' : 'ended'}`}>
                           {hist.is_active ? 'Active' : 'Ended'}
                         </div>
-                        <div className="hc-times">
-                          <span><strong>Start:</strong> {new Date(hist.started_at).toLocaleString()}</span>
-                          {hist.ended_at && (
-                            <span><strong>End:</strong> {new Date(hist.ended_at).toLocaleString()}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="hc-right">
-                        <div className="hc-count">
-                          <Users size={18} />
-                          <strong>{hist.student_count}</strong>
-                        </div>
-                        <span className="hc-count-label">Students Participated</span>
-                      </div>
-                    </div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1473,71 +1516,74 @@ export default function Dashboard({ theme, toggleTheme }) {
         </AnimatePresence>
 
         {/* --- FLOATING AI CHAT ASSISTANT --- */}
-        <div className={`floating-chat-widget ${chatOpen ? 'open' : ''}`}>
-          <AnimatePresence>
-            {!chatOpen && (
-              <motion.button 
-                className="chat-fab" 
-                onClick={() => setChatOpen(true)}
-                initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                whileHover={isMobile ? {} : { scale: 1.05 }}
-              >
-                <MessageSquare size={24} />
-              </motion.button>
-            )}
-          </AnimatePresence>
+        {createPortal(
+          <div className={`floating-chat-widget ${chatOpen ? 'open' : ''}`}>
+            <AnimatePresence>
+              {!chatOpen && (
+                <motion.button 
+                  className="chat-fab" 
+                  onClick={() => setChatOpen(true)}
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                  whileHover={isMobile ? {} : { scale: 1.05 }}
+                >
+                  <MessageSquare size={24} />
+                </motion.button>
+              )}
+            </AnimatePresence>
 
-          <AnimatePresence>
-            {chatOpen && (
-              <motion.div 
-                className="chat-panel"
-                initial={{ opacity: 0, y: isMobile ? 10 : 20, scale: isMobile ? 1 : 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: isMobile ? 10 : 20, scale: isMobile ? 1 : 0.95 }}
-                transition={isMobile ? { duration: 0.2 } : { type: 'spring', stiffness: 300, damping: 25 }}
-              >
-                <div className="chat-header">
-                  <div className="ch-info">
-                    <Sparkles size={18} />
-                    <span>AI Assistant</span>
+            <AnimatePresence>
+              {chatOpen && (
+                <motion.div 
+                  className="chat-panel"
+                  initial={{ opacity: 0, y: isMobile ? 10 : 20, scale: isMobile ? 1 : 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: isMobile ? 10 : 20, scale: isMobile ? 1 : 0.95 }}
+                  transition={isMobile ? { duration: 0.2 } : { type: 'spring', stiffness: 300, damping: 25 }}
+                >
+                  <div className="chat-header">
+                    <div className="ch-info">
+                      <Sparkles size={18} />
+                      <span>AI Assistant</span>
+                    </div>
+                    <button onClick={() => setChatOpen(false)}><X size={16}/></button>
                   </div>
-                  <button onClick={() => setChatOpen(false)}><X size={16}/></button>
-                </div>
-                <div className="chat-body">
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`chat-bubble ${msg.role}`}>
-                      <div className="cb-inner">{msg.text}</div>
-                    </div>
-                  ))}
-                  {isChatTyping && (
-                    <div className="chat-bubble ai typing">
-                      <div className="dot"></div><div className="dot"></div><div className="dot"></div>
-                    </div>
-                  )}
-                </div>
-                <form className="chat-input-area" onSubmit={handleChatSubmit}>
-                  <input 
-                    type="text" 
-                    placeholder="Ask about feedback trends..." 
-                    value={chatInput} 
-                    onChange={e => setChatInput(e.target.value)}
-                    disabled={isChatTyping}
-                  />
-                  <button type="submit" disabled={!chatInput.trim() || isChatTyping}>
-                    <ArrowLeft size={16} style={{transform: 'rotate(135deg)'}} />
-                  </button>
-                </form>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  <div className="chat-body">
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} className={`chat-bubble ${msg.role}`}>
+                        <div className="cb-inner">{msg.text}</div>
+                      </div>
+                    ))}
+                    {isChatTyping && (
+                      <div className="chat-bubble ai typing">
+                        <div className="dot"></div><div className="dot"></div><div className="dot"></div>
+                      </div>
+                    )}
+                  </div>
+                  <form className="chat-input-area" onSubmit={handleChatSubmit}>
+                    <input 
+                      type="text" 
+                      placeholder="Ask about feedback trends..." 
+                      value={chatInput} 
+                      onChange={e => setChatInput(e.target.value)}
+                      disabled={isChatTyping}
+                    />
+                    <button type="submit" disabled={!chatInput.trim() || isChatTyping}>
+                      <ArrowLeft size={16} style={{transform: 'rotate(135deg)'}} />
+                    </button>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>,
+          document.body
+        )}
       </main>
     </div>
   );
 }
 
 // â”€â”€â”€ SUBJECT FEEDBACK MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function SubjectFeedbackModal({ subject, feedbackList, onClose, renderFormattedFeedback, profile, staff }) {
+function SubjectFeedbackModal({ subject, feedbackList, onClose, renderFormattedFeedback, profile, staff, sessionHistory, selectedSessionId, handleSessionChange }) {
   const [filter, setFilter] = useState('All');
   const [showPdfConfirm, setShowPdfConfirm] = useState(false);
   const staffObj = staff?.find(s => s.subject_id === subject.id);
@@ -1576,6 +1622,11 @@ function SubjectFeedbackModal({ subject, feedbackList, onClose, renderFormattedF
             </div>
           </div>
           <div className="sfm-header-actions">
+            <PremiumSessionDropdown 
+              sessionHistory={sessionHistory}
+              selectedSessionId={selectedSessionId}
+              onSessionChange={handleSessionChange}
+            />
             <button
               className="sfm-close-btn sfm-dl-btn"
               onClick={() => setShowPdfConfirm(true)}

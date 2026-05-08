@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './pages/Landing';
 import AuthFlow from './pages/AuthFlow';
 import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
+import Auth from './pages/Auth';
 import AdminMasterDashboard from './pages/AdminMasterDashboard';
 import StudentSelect from './pages/StudentSelect';
 import SubjectList from './pages/SubjectList';
@@ -49,12 +49,12 @@ const AnimatedRoutes = ({ theme, toggleTheme }) => {
         } />
         <Route path="/cr-login" element={
           <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
-            <Login theme={theme} role="CR" />
+            <Auth theme={theme} role="CR" />
           </motion.div>
         } />
         <Route path="/admin-login" element={
           <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
-            <Login theme={theme} role="Admin" />
+            <Auth theme={theme} role="Admin" />
           </motion.div>
         } />
         <Route path="/dashboard" element={
@@ -63,9 +63,7 @@ const AnimatedRoutes = ({ theme, toggleTheme }) => {
           </motion.div>
         } />
         <Route path="/admin-master" element={
-          <motion.div initial="initial" animate="animate" exit="exit" variants={pageVariants} transition={pageTransition}>
-            <AdminMasterDashboard theme={theme} />
-          </motion.div>
+          <AdminMasterDashboard theme={theme} />
         } />
 
         {/* Student Feedback Flow */}

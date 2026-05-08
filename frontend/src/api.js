@@ -8,16 +8,16 @@ const api = axios.create({
 });
 
 export const getDepartmentsByYear = (year) => api.get(`/departments-by-year/${year}`);
-export const getSubjects = (deptId) => api.get(`/subjects/${deptId}`);
+export const getSubjects = (deptId, year) => api.get(`/subjects/${deptId}${year ? `?year=${year}` : ''}`);
 export const getStaff = (deptId) => api.get(`/staff/${deptId}`);
 export const submitFeedback = (data) => api.post('/submit-feedback', data);
 
 export const crSignup = (data) => api.post('/auth/cr-signup', data); // Uses new real signup
 export const crLogin = (data) => api.post('/auth/cr-login', data);
 export const getCrProfile = (uid) => api.get(`/auth/cr-profile?uid=${uid}`);
-export const getInsights = (dept, sessionId = '') => api.get(`/admin/insights?dept=${dept}${sessionId ? `&session_id=${sessionId}` : ''}`);
-export const getFeedbackLogs = (dept, sessionId = '') => api.get(`/admin/feedback?dept=${dept}${sessionId ? `&session_id=${sessionId}` : ''}`);
-export const sendChatQuery = (dept, sessionId, message) => api.post(`/admin/chat`, { dept, session_id: sessionId, message });
+export const getInsights = (deptId, sessionId = '', year = '') => api.get(`/admin/insights?dept_id=${deptId}${sessionId ? `&session_id=${sessionId}` : ''}${year ? `&year=${year}` : ''}`);
+export const getFeedbackLogs = (deptId, sessionId = '', year = '') => api.get(`/admin/feedback?dept_id=${deptId}${sessionId ? `&session_id=${sessionId}` : ''}${year ? `&year=${year}` : ''}`);
+export const sendChatQuery = (deptId, sessionId, message, year = '') => api.post(`/admin/chat`, { dept_id: deptId, session_id: sessionId, message, year });
 export const getSubmittedSubjects = (studentUid, deptId) =>
   api.get(`/submitted-subjects?student_uid=${studentUid}&dept_id=${deptId}`);
 export const getCRs = () => api.get('/admin/crs');

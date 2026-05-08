@@ -2,16 +2,15 @@ const { supabase } = require('../utils/supabaseClient');
 const { generateClassInsights, chatWithAssistant } = require('../services/aiService');
 
 exports.getFeedback = async (req, res) => {
-  const { dept, session_id } = req.query;
+  const { dept_id, session_id, year } = req.query;
   try {
     let query = supabase.from('feedback').select('*, subjects(name), staff(name)').order('created_at', { ascending: false });
 
-    if (dept) {
-      const { data: deptData } = await supabase.from('departments').select('id').eq('name', dept);
-      if (!deptData || deptData.length === 0) return res.json([]);
-      const deptId = deptData[0].id;
+    if (dept_id) {
+      let subjQuery = supabase.from('subjects').select('id').eq('department_id', dept_id);
+      if (year) subjQuery = subjQuery.eq('year', year);
+      const { data: subjData } = await subjQuery;
       
-      const { data: subjData } = await supabase.from('subjects').select('id').eq('department_id', deptId);
       const subjectIds = (subjData || []).map(s => s.id);
       if (subjectIds.length === 0) return res.json([]);
       
@@ -31,17 +30,19 @@ exports.getFeedback = async (req, res) => {
 };
 
 exports.getInsights = async (req, res) => {
-  const { dept, session_id } = req.query;
+  const { dept_id, session_id, year } = req.query;
   try {
     let query = supabase.from('feedback').select('*');
-    if (dept) {
-      const { data: deptData } = await supabase.from('departments').select('id').eq('name', dept);
-      if (deptData && deptData.length > 0) {
-        const { data: subjData } = await supabase.from('subjects').select('id').eq('department_id', deptData[0].id);
-        const subjIds = (subjData || []).map(s => s.id);
-        if (subjIds.length > 0) {
-          query = query.in('subject_id', subjIds);
-        }
+    if (dept_id) {
+      let subjQuery = supabase.from('subjects').select('id').eq('department_id', dept_id);
+      if (year) subjQuery = subjQuery.eq('year', year);
+      const { data: subjData } = await subjQuery;
+      
+      const subjIds = (subjData || []).map(s => s.id);
+      if (subjIds.length > 0) {
+        query = query.in('subject_id', subjIds);
+      } else {
+        return res.json(null);
       }
     }
 
@@ -61,7 +62,7 @@ exports.getInsights = async (req, res) => {
 
 exports.getCRs = async (req, res) => {
   try {
-    const { data, error } = await supabase.from('cr_profiles').select('id, email, full_name, department, year, is_approved').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('cr_profiles').select('id, email, full_name, department, year, phone, is_approved').order('created_at', { ascending: false });
     if (error) throw error;
     res.json(data || []);
   } catch (error) {
@@ -170,20 +171,22 @@ exports.updateSubject = async (req, res) => {
 };
 
 exports.chat = async (req, res) => {
-  const { dept, session_id, message } = req.body;
+  const { dept_id, session_id, message, year } = req.body;
   if (!message) return res.status(400).json({ error: "Message is required" });
 
   try {
     let query = supabase.from('feedback').select('*, subjects(name)').order('created_at', { ascending: false }).limit(200);
 
-    if (dept) {
-      const { data: deptData } = await supabase.from('departments').select('id').eq('name', dept);
-      if (deptData && deptData.length > 0) {
-        const { data: subjData } = await supabase.from('subjects').select('id').eq('department_id', deptData[0].id);
-        const subjIds = (subjData || []).map(s => s.id);
-        if (subjIds.length > 0) {
-          query = query.in('subject_id', subjIds);
-        }
+    if (dept_id) {
+      let subjQuery = supabase.from('subjects').select('id').eq('department_id', dept_id);
+      if (year) subjQuery = subjQuery.eq('year', year);
+      const { data: subjData } = await subjQuery;
+      
+      const subjIds = (subjData || []).map(s => s.id);
+      if (subjIds.length > 0) {
+        query = query.in('subject_id', subjIds);
+      } else {
+        return res.json({ response: "I don't see any feedback for your department and year yet." });
       }
     }
 

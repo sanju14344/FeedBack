@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
-import { LogIn, GraduationCap, ArrowLeft, Shield, Menu, X } from 'lucide-react';
+import { LogIn, GraduationCap, ArrowLeft, Shield, Menu, X, Bell } from 'lucide-react';
 
 export default function Header({ 
   showAuth = true, 
