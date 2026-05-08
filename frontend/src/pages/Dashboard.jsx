@@ -428,28 +428,23 @@ export default function Dashboard({ theme, toggleTheme }) {
             setStaff(staffRes.data);
             setSubjects(subRes.data);
             
-            // Only show active session if it belongs to this CR
             const activeSessionData = sessionRes.data?.is_active ? sessionRes.data : null;
             const isMyActiveSession = activeSessionData && activeSessionData.cr_id === uid;
             setSession(isMyActiveSession ? activeSessionData : null);
             
-            // Only show history created by this CR
             const myHistory = (historyRes.data || []).filter(s => s.cr_id === uid);
             setSessionHistory(myHistory);
             
             defId = isMyActiveSession ? activeSessionData.id : (myHistory.length > 0 ? myHistory[0].id : 'all');
             setSelectedSessionId(defId);
+
+            // Fetch feedback and insights using the resolved department ID
+            handleGetInsights(myDept.id, defId === 'all' ? '' : defId, prof.year);
+            const fbRes = await getFeedbackLogs(myDept.id, defId === 'all' ? '' : defId, prof.year);
+            setFeedback(fbRes.data);
           }
         } catch(e) {
           console.error("Error fetching management data:", e);
-        }
-
-        // Use the resolved myDept.id for precise querying
-        const targetDeptId = deptsRes?.data?.find(d => d.name === prof.department)?.id;
-        if (targetDeptId) {
-          handleGetInsights(targetDeptId, defId === 'all' ? '' : defId, prof.year);
-          const fbRes = await getFeedbackLogs(targetDeptId, defId === 'all' ? '' : defId, prof.year);
-          setFeedback(fbRes.data);
         }
       }
     } catch (err) {
