@@ -102,6 +102,26 @@ exports.createStaff = async (req, res) => {
   const { name, department_id, subject_id } = req.body;
   if (!name || !department_id) return res.status(400).json({ error: "Name and department_id are required" });
   try {
+    // Prevent duplicates: Check if staff with same name and subject already exists
+    let query = supabase
+      .from('staff')
+      .select('*')
+      .eq('name', name)
+      .eq('department_id', department_id);
+      
+    if (subject_id) {
+      query = query.eq('subject_id', subject_id);
+    } else {
+      query = query.is('subject_id', null);
+    }
+
+    const { data: existing, error: fetchErr } = await query.limit(1);
+    if (fetchErr) throw fetchErr;
+    if (existing && existing.length > 0) {
+      // Staff already exists, just return it
+      return res.status(200).json(existing[0]);
+    }
+
     const { data, error } = await supabase.from('staff').insert([{ name, department_id, subject_id }]).select();
     if (error) throw error;
     res.status(201).json(data[0]);
