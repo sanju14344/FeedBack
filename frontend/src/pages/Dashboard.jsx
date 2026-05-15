@@ -73,6 +73,7 @@ import {
   createSubject, 
   deleteSubject,
   updateSubject,
+  getDepartments,
   getDepartmentsByYear,
   startSession,
   endSession,
@@ -415,8 +416,19 @@ export default function Dashboard({ theme, toggleTheme }) {
       if (prof.department) {
         let defId = 'all';
         try {
-          const deptsRes = await getDepartmentsByYear(prof.year);
-          const myDept = deptsRes.data.find(d => d.name === prof.department);
+          // First try to resolve department via year-filtered endpoint
+          let myDept = null;
+          try {
+            const deptsRes = await getDepartmentsByYear(prof.year);
+            myDept = (deptsRes.data || []).find(d => d.name === prof.department);
+          } catch (_) {}
+
+          // Fallback: if not found (e.g. no subjects exist yet), look up all departments
+          if (!myDept) {
+            const allDeptsRes = await getDepartments();
+            myDept = (allDeptsRes.data || []).find(d => d.name === prof.department);
+          }
+
           if (myDept) {
             setProfile(prev => ({ ...prev, dept_id: myDept.id }));
             const [staffRes, subRes, sessionRes, historyRes] = await Promise.all([
@@ -442,6 +454,8 @@ export default function Dashboard({ theme, toggleTheme }) {
             handleGetInsights(myDept.id, defId === 'all' ? '' : defId, prof.year);
             const fbRes = await getFeedbackLogs(myDept.id, defId === 'all' ? '' : defId, prof.year);
             setFeedback(fbRes.data);
+          } else {
+            console.error('Could not resolve department for:', prof.department);
           }
         } catch(e) {
           console.error("Error fetching management data:", e);

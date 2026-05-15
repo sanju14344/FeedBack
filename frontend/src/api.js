@@ -7,6 +7,7 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+export const getDepartments = () => api.get('/departments');
 export const getDepartmentsByYear = (year) => api.get(`/departments-by-year/${year}`);
 export const getSubjects = (deptId, year) => api.get(`/subjects/${deptId}${year ? `?year=${year}` : ''}`);
 export const getStaff = (deptId) => api.get(`/staff/${deptId}`);
