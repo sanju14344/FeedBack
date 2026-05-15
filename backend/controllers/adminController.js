@@ -115,7 +115,17 @@ exports.createSubject = async (req, res) => {
   if (!name || !department_id) return res.status(400).json({ error: "Name and department_id are required" });
   try {
     const { data, error } = await supabase.from('subjects').insert([{ name, department_id, year }]).select();
-    if (error) throw error;
+    if (error) {
+      // Unique constraint violation — subject already exists, return the existing one
+      if (error.code === '23505') {
+        let existingQuery = supabase.from('subjects').select('*').eq('name', name).eq('department_id', department_id);
+        if (year) existingQuery = existingQuery.eq('year', year);
+        const { data: existing, error: fetchErr } = await existingQuery.maybeSingle();
+        if (fetchErr) throw fetchErr;
+        if (existing) return res.status(200).json(existing);
+      }
+      throw error;
+    }
     res.status(201).json(data[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });

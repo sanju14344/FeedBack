@@ -520,19 +520,38 @@ export default function Dashboard({ theme, toggleTheme }) {
       alert("Both Subject Name and Staff Name are strictly required to create an entry.");
       return;
     }
-    if (!profile?.dept_id) return;
+    if (!profile?.dept_id) {
+      alert("Department information is missing. Please refresh and try again.");
+      return;
+    }
 
     try {
       let targetSubjectId = null;
 
-      // Handle Subject
-      const createSubRes = await createSubject({ name: newEntry.subject, department_id: profile.dept_id, year: profile.year });
-      targetSubjectId = createSubRes.data.id;
+      // Create subject — backend returns existing subject if name already exists (upsert-style)
+      const createSubRes = await createSubject({
+        name: newEntry.subject.trim(),
+        department_id: profile.dept_id,
+        year: profile.year
+      });
 
-      // Handle Staff
-      await createStaff({ name: newEntry.staff, department_id: profile.dept_id, subject_id: targetSubjectId });
+      // Response data is the subject object (newly created or existing)
+      targetSubjectId = createSubRes.data?.id;
+      if (!targetSubjectId) {
+        alert('Failed to create or find the subject. Please try again.');
+        return;
+      }
+
+      // Create staff linked to this subject
+      await createStaff({
+        name: newEntry.staff.trim(),
+        department_id: profile.dept_id,
+        subject_id: targetSubjectId
+      });
 
       setNewEntry({ subject: '', staff: '' });
+
+      // Refresh lists
       const [staffRes, subRes] = await Promise.all([
         getStaff(profile.dept_id),
         getSubjects(profile.dept_id, profile.year)
@@ -540,7 +559,10 @@ export default function Dashboard({ theme, toggleTheme }) {
       setStaff(staffRes.data);
       setSubjects(subRes.data);
     } catch (err) {
-      alert('An unexpected error occurred.');
+      // Show the real error message from the backend
+      const msg = err?.response?.data?.error || err?.message || 'An unexpected error occurred.';
+      alert(`Failed to create assignment: ${msg}`);
+      console.error('handleAddEntry error:', err);
     }
   };
 
