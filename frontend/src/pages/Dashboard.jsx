@@ -413,53 +413,39 @@ export default function Dashboard({ theme, toggleTheme }) {
       const prof = profileRes.data;
       setProfile(prof);
 
-      if (prof.department) {
+      // dept_id is now resolved server-side in getCrProfile
+      const deptId = prof.dept_id;
+
+      if (deptId) {
         let defId = 'all';
         try {
-          // First try to resolve department via year-filtered endpoint
-          let myDept = null;
-          try {
-            const deptsRes = await getDepartmentsByYear(prof.year);
-            myDept = (deptsRes.data || []).find(d => d.name === prof.department);
-          } catch (_) {}
+          const [staffRes, subRes, sessionRes, historyRes] = await Promise.all([
+            getStaff(deptId),
+            getSubjects(deptId, prof.year),
+            getSessionStatus(deptId),
+            getSessionHistory(deptId)
+          ]);
+          setStaff(staffRes.data);
+          setSubjects(subRes.data);
 
-          // Fallback: if not found (e.g. no subjects exist yet), look up all departments
-          if (!myDept) {
-            const allDeptsRes = await getDepartments();
-            myDept = (allDeptsRes.data || []).find(d => d.name === prof.department);
-          }
+          const activeSessionData = sessionRes.data?.is_active ? sessionRes.data : null;
+          const isMyActiveSession = activeSessionData && activeSessionData.cr_id === uid;
+          setSession(isMyActiveSession ? activeSessionData : null);
 
-          if (myDept) {
-            setProfile(prev => ({ ...prev, dept_id: myDept.id }));
-            const [staffRes, subRes, sessionRes, historyRes] = await Promise.all([
-              getStaff(myDept.id),
-              getSubjects(myDept.id, prof.year),
-              getSessionStatus(myDept.id),
-              getSessionHistory(myDept.id)
-            ]);
-            setStaff(staffRes.data);
-            setSubjects(subRes.data);
-            
-            const activeSessionData = sessionRes.data?.is_active ? sessionRes.data : null;
-            const isMyActiveSession = activeSessionData && activeSessionData.cr_id === uid;
-            setSession(isMyActiveSession ? activeSessionData : null);
-            
-            const myHistory = (historyRes.data || []).filter(s => s.cr_id === uid);
-            setSessionHistory(myHistory);
-            
-            defId = isMyActiveSession ? activeSessionData.id : (myHistory.length > 0 ? myHistory[0].id : 'all');
-            setSelectedSessionId(defId);
+          const myHistory = (historyRes.data || []).filter(s => s.cr_id === uid);
+          setSessionHistory(myHistory);
 
-            // Fetch feedback and insights using the resolved department ID
-            handleGetInsights(myDept.id, defId === 'all' ? '' : defId, prof.year);
-            const fbRes = await getFeedbackLogs(myDept.id, defId === 'all' ? '' : defId, prof.year);
-            setFeedback(fbRes.data);
-          } else {
-            console.error('Could not resolve department for:', prof.department);
-          }
+          defId = isMyActiveSession ? activeSessionData.id : (myHistory.length > 0 ? myHistory[0].id : 'all');
+          setSelectedSessionId(defId);
+
+          handleGetInsights(deptId, defId === 'all' ? '' : defId, prof.year);
+          const fbRes = await getFeedbackLogs(deptId, defId === 'all' ? '' : defId, prof.year);
+          setFeedback(fbRes.data);
         } catch(e) {
           console.error("Error fetching management data:", e);
         }
+      } else {
+        console.error('dept_id missing from profile for department:', prof.department);
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);

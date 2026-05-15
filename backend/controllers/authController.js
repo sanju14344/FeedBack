@@ -73,6 +73,30 @@ exports.getCrProfile = async (req, res) => {
     if (!data || data.length === 0) return res.status(404).json({ error: "Not found" });
     const profile = data[0];
     delete profile.passcode_hash;
+
+    // Resolve dept_id: look up or auto-create the department row
+    if (profile.department) {
+      let { data: deptData, error: deptErr } = await supabase
+        .from('departments')
+        .select('id')
+        .eq('name', profile.department)
+        .maybeSingle();
+
+      // If department doesn't exist yet, create it automatically
+      if (!deptData && !deptErr) {
+        const { data: newDept } = await supabase
+          .from('departments')
+          .insert([{ name: profile.department }])
+          .select()
+          .single();
+        deptData = newDept;
+      }
+
+      if (deptData?.id) {
+        profile.dept_id = deptData.id;
+      }
+    }
+
     res.json(profile);
   } catch (e) {
     res.status(500).json({ error: e.message });
